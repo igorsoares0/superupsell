@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { useLoaderData, useNavigate, useFetcher } from "react-router";
+import { useLoaderData, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
 import {
   parseSurfaceSlug,
@@ -15,7 +15,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   if (!surface) throw new Response("Invalid surface", { status: 404 });
 
   const offers = await getOffersBySurface(session.shop, surface);
-  return { offers, surface, label: surfaceLabel(surface), slug: params.surface! };
+  return {
+    offers,
+    surface,
+    label: surfaceLabel(surface),
+    slug: params.surface!,
+  };
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
@@ -38,21 +43,14 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
 export default function OfferList() {
   const { offers, label, slug } = useLoaderData<typeof loader>();
-  const navigate = useNavigate();
   const fetcher = useFetcher();
 
   const handleToggle = (offerId: string) => {
-    fetcher.submit(
-      { intent: "toggle", offerId },
-      { method: "POST" },
-    );
+    fetcher.submit({ intent: "toggle", offerId }, { method: "POST" });
   };
 
   const handleDelete = (offerId: string) => {
-    fetcher.submit(
-      { intent: "delete", offerId },
-      { method: "POST" },
-    );
+    fetcher.submit({ intent: "delete", offerId }, { method: "POST" });
   };
 
   return (
@@ -60,13 +58,9 @@ export default function OfferList() {
       <s-link slot="breadcrumb-actions" href="/app">
         Home
       </s-link>
-      <s-button
-        slot="primary-action"
-        variant="primary"
-        onClick={() => navigate(`/app/upsells/${slug}/new`)}
-      >
+      <s-link slot="primary-action" href={`/app/upsells/${slug}/new`}>
         Create offer
-      </s-button>
+      </s-link>
 
       {offers.length === 0 ? (
         <s-section heading="No offers yet">

@@ -1,5 +1,4 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { useNavigate } from "react-router";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -35,8 +34,6 @@ const SURFACES = [
 ] as const;
 
 export default function Home() {
-  const navigate = useNavigate();
-
   return (
     <s-page heading="SuperUpsell">
       <s-section heading="Choose an upsell surface">
@@ -57,12 +54,7 @@ export default function Home() {
             <s-stack direction="block" gap="base">
               <s-heading>{surface.title}</s-heading>
               <s-paragraph>{surface.description}</s-paragraph>
-              <s-button
-                onClick={() => navigate(surface.href)}
-                variant="primary"
-              >
-                Manage
-              </s-button>
+              <s-link href={surface.href}>Manage →</s-link>
             </s-stack>
           </s-box>
         ))}

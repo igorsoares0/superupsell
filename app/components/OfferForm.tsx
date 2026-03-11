@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSubmit, useNavigation } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { UpsellPreview } from "./UpsellPreview";
 
 type Target = { type: string; id: string; title?: string };
 type UpsellProduct = {
@@ -64,6 +65,14 @@ const DEFAULTS = {
   isActive: false,
 };
 
+const NUMBER_FIELDS = new Set([
+  "discountPercentage",
+  "titleSize",
+  "textSize",
+  "buttonSize",
+  "cornerRadius",
+]);
+
 export function OfferForm({
   offer,
   surfaceLabel: surfLabel,
@@ -83,7 +92,8 @@ export function OfferForm({
     upsellName: offer?.upsellName ?? DEFAULTS.upsellName,
     discountLabel: offer?.discountLabel ?? DEFAULTS.discountLabel,
     targetMode: offer?.targetMode ?? DEFAULTS.targetMode,
-    discountPercentage: offer?.discountPercentage ?? DEFAULTS.discountPercentage,
+    discountPercentage:
+      offer?.discountPercentage ?? DEFAULTS.discountPercentage,
     showVariants: offer?.showVariants ?? DEFAULTS.showVariants,
     showImage: offer?.showImage ?? DEFAULTS.showImage,
     layout: offer?.layout ?? DEFAULTS.layout,
@@ -103,6 +113,7 @@ export function OfferForm({
     () =>
       offer?.products.map((p) => ({
         productId: p.productId,
+        title: undefined,
         variantIds: p.variantIds ?? undefined,
       })) ?? [],
   );
@@ -125,7 +136,7 @@ export function OfferForm({
       const field = target.getAttribute("data-field");
       if (!field) return;
       const value = (target as any).value;
-      if (field === "discountPercentage" || field === "titleSize" || field === "textSize" || field === "buttonSize" || field === "cornerRadius") {
+      if (NUMBER_FIELDS.has(field)) {
         setForm((prev) => ({ ...prev, [field]: Number(value) || 0 }));
       } else {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -193,7 +204,6 @@ export function OfferForm({
     const data = new FormData();
     data.set("intent", isEditing ? "update" : "create");
 
-    // String fields
     data.set("upsellName", form.upsellName);
     data.set("discountLabel", form.discountLabel);
     data.set("targetMode", form.targetMode);
@@ -204,31 +214,30 @@ export function OfferForm({
     data.set("backgroundColor", form.backgroundColor);
     data.set("borderColor", form.borderColor);
 
-    // Number fields
     data.set("discountPercentage", String(form.discountPercentage));
     data.set("titleSize", String(form.titleSize));
     data.set("textSize", String(form.textSize));
     data.set("buttonSize", String(form.buttonSize));
     data.set("cornerRadius", String(form.cornerRadius));
 
-    // Boolean fields
     data.set("showVariants", String(form.showVariants));
     data.set("showImage", String(form.showImage));
     data.set("isActive", String(form.isActive));
 
-    // JSON fields
     data.set("targets", JSON.stringify(selectedTargets));
     data.set("upsellProducts", JSON.stringify(selectedProducts));
 
     submit(data, { method: "POST" });
   }, [form, selectedProducts, selectedTargets, isEditing, submit]);
 
+  // ─── Render ───
   return (
     <div ref={formRef}>
-      <s-page
-        heading={`${isEditing ? "Edit" : "New"} ${surfLabel} Upsell`}
-      >
-        <s-link slot="breadcrumb-actions" href={`/app/upsells/${surfaceSlug}`}>
+      <s-page heading={`${isEditing ? "Edit" : "New"} ${surfLabel} Upsell`}>
+        <s-link
+          slot="breadcrumb-actions"
+          href={`/app/upsells/${surfaceSlug}`}
+        >
           {surfLabel} Offers
         </s-link>
         <s-button
@@ -240,200 +249,234 @@ export function OfferForm({
           Save
         </s-button>
 
-        {/* ─── Basic Settings ─── */}
-        <s-section heading="Basic Settings">
-          <s-box padding="base">
-            <s-stack direction="block" gap="base">
-              <s-text-field
-                label="Offer name"
-                data-field="upsellName"
-                value={form.upsellName}
-              />
-              {errors.upsellName && (
-                <s-banner tone="critical">{errors.upsellName}</s-banner>
-              )}
+        {/* FR-040: split layout — form left, preview right */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "24px",
+            alignItems: "start",
+          }}
+        >
+          {/* ─── Left column: form ─── */}
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            {/* Basic Settings */}
+            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+              <s-stack direction="block" gap="base">
+                <s-heading>Basic Settings</s-heading>
+                <s-text-field
+                  label="Offer name"
+                  data-field="upsellName"
+                  value={form.upsellName}
+                />
+                {errors.upsellName && (
+                  <s-banner tone="critical">{errors.upsellName}</s-banner>
+                )}
 
-              <s-text-field
-                label="Discount label"
-                data-field="discountLabel"
-                value={form.discountLabel}
-              />
-              {errors.discountLabel && (
-                <s-banner tone="critical">{errors.discountLabel}</s-banner>
-              )}
+                <s-text-field
+                  label="Discount label"
+                  data-field="discountLabel"
+                  value={form.discountLabel}
+                />
+                {errors.discountLabel && (
+                  <s-banner tone="critical">{errors.discountLabel}</s-banner>
+                )}
 
-              <s-number-field
-                label="Discount percentage"
-                data-field="discountPercentage"
-                value={String(form.discountPercentage)}
-                min={0.01}
-                max={100}
-                step={0.01}
-              />
-              {errors.discountPercentage && (
-                <s-banner tone="critical">
-                  {errors.discountPercentage}
-                </s-banner>
-              )}
+                <s-number-field
+                  label="Discount percentage"
+                  data-field="discountPercentage"
+                  value={String(form.discountPercentage)}
+                  min={0.01}
+                  max={100}
+                  step={0.01}
+                />
+                {errors.discountPercentage && (
+                  <s-banner tone="critical">
+                    {errors.discountPercentage}
+                  </s-banner>
+                )}
 
-              <s-switch
-                label="Active"
-                data-field="isActive"
-                checked={form.isActive || undefined}
-              />
-            </s-stack>
-          </s-box>
-        </s-section>
+                <s-switch
+                  label="Active"
+                  data-field="isActive"
+                  checked={form.isActive || undefined}
+                />
+              </s-stack>
+            </s-box>
 
-        {/* ─── Target Mode ─── */}
-        <s-section heading="Target Products">
-          <s-box padding="base">
-            <s-stack direction="block" gap="base">
-              <s-select
-                label="Apply to"
-                data-field="targetMode"
-                value={form.targetMode}
-              >
-                <s-option value="all_products">All products</s-option>
-                <s-option value="collections">Specific collections</s-option>
-                <s-option value="specific_products">
-                  Specific products
-                </s-option>
-              </s-select>
+            {/* Target Mode */}
+            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+              <s-stack direction="block" gap="base">
+                <s-heading>Target Products</s-heading>
+                <s-select
+                  label="Apply to"
+                  data-field="targetMode"
+                  value={form.targetMode}
+                >
+                  <s-option value="all_products">All products</s-option>
+                  <s-option value="collections">
+                    Specific collections
+                  </s-option>
+                  <s-option value="specific_products">
+                    Specific products
+                  </s-option>
+                </s-select>
 
-              {(form.targetMode === "collections" ||
-                form.targetMode === "specific_products") && (
-                <>
-                  <s-button onClick={pickTargets}>
-                    Select{" "}
-                    {form.targetMode === "collections"
-                      ? "collections"
-                      : "products"}{" "}
-                    ({selectedTargets.length} selected)
-                  </s-button>
+                {(form.targetMode === "collections" ||
+                  form.targetMode === "specific_products") && (
+                  <>
+                    <s-button onClick={pickTargets}>
+                      Select{" "}
+                      {form.targetMode === "collections"
+                        ? "collections"
+                        : "products"}{" "}
+                      ({selectedTargets.length} selected)
+                    </s-button>
+                    {selectedTargets.length > 0 && (
+                      <s-stack direction="inline" gap="small-100">
+                        {selectedTargets.map((t) => (
+                          <s-badge key={t.id}>
+                            {t.title || t.id}
+                          </s-badge>
+                        ))}
+                      </s-stack>
+                    )}
+                  </>
+                )}
+                {errors.targets && (
+                  <s-banner tone="critical">{errors.targets}</s-banner>
+                )}
+              </s-stack>
+            </s-box>
+
+            {/* Upsell Products */}
+            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+              <s-stack direction="block" gap="base">
+                <s-heading>Upsell Products</s-heading>
+                <s-button onClick={pickProducts}>
+                  Select upsell products ({selectedProducts.length} selected)
+                </s-button>
+                {selectedProducts.length > 0 && (
                   <s-stack direction="inline" gap="small-100">
-                    {selectedTargets.map((t) => (
-                      <s-badge key={t.id}>{t.title || t.id}</s-badge>
+                    {selectedProducts.map((p) => (
+                      <s-badge key={p.productId}>
+                        {p.title || p.productId}
+                      </s-badge>
                     ))}
                   </s-stack>
-                </>
-              )}
-              {errors.targets && (
-                <s-banner tone="critical">{errors.targets}</s-banner>
-              )}
-            </s-stack>
-          </s-box>
-        </s-section>
-
-        {/* ─── Upsell Products ─── */}
-        <s-section heading="Upsell Products">
-          <s-box padding="base">
-            <s-stack direction="block" gap="base">
-              <s-button onClick={pickProducts}>
-                Select upsell products ({selectedProducts.length} selected)
-              </s-button>
-              <s-stack direction="inline" gap="small-100">
-                {selectedProducts.map((p) => (
-                  <s-badge key={p.productId}>
-                    {p.title || p.productId}
-                  </s-badge>
-                ))}
+                )}
+                {errors.upsellProducts && (
+                  <s-banner tone="critical">
+                    {errors.upsellProducts}
+                  </s-banner>
+                )}
               </s-stack>
-              {errors.upsellProducts && (
-                <s-banner tone="critical">{errors.upsellProducts}</s-banner>
-              )}
-            </s-stack>
-          </s-box>
-        </s-section>
+            </s-box>
 
-        {/* ─── Display Options ─── */}
-        <s-section heading="Display Options">
-          <s-box padding="base">
-            <s-stack direction="block" gap="base">
-              <s-select
-                label="Layout"
-                data-field="layout"
-                value={form.layout}
-              >
-                <s-option value="vertical">Vertical</s-option>
-                <s-option value="slider">Slider</s-option>
-              </s-select>
+            {/* Display Options */}
+            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+              <s-stack direction="block" gap="base">
+                <s-heading>Display Options</s-heading>
+                <s-select
+                  label="Layout"
+                  data-field="layout"
+                  value={form.layout}
+                >
+                  <s-option value="vertical">Vertical</s-option>
+                  <s-option value="slider">Slider</s-option>
+                </s-select>
 
-              <s-switch
-                label="Show product variants"
-                data-field="showVariants"
-                checked={form.showVariants || undefined}
-              />
+                <s-switch
+                  label="Show product variants"
+                  data-field="showVariants"
+                  checked={form.showVariants || undefined}
+                />
 
-              <s-switch
-                label="Show product image"
-                data-field="showImage"
-                checked={form.showImage || undefined}
-              />
-            </s-stack>
-          </s-box>
-        </s-section>
+                <s-switch
+                  label="Show product image"
+                  data-field="showImage"
+                  checked={form.showImage || undefined}
+                />
+              </s-stack>
+            </s-box>
 
-        {/* ─── Design (aside) ─── */}
-        <s-section slot="aside" heading="Design">
-          <s-box padding="base">
-            <s-stack direction="block" gap="base">
-              <s-text-field
-                label="Title text"
-                data-field="titleText"
-                value={form.titleText}
-              />
-              <s-text-field
-                label="Button text"
-                data-field="buttonText"
-                value={form.buttonText}
-              />
-              <s-color-field
-                label="Button color"
-                data-field="buttonColor"
-                value={form.buttonColor}
-              />
-              <s-color-field
-                label="Background color"
-                data-field="backgroundColor"
-                value={form.backgroundColor}
-              />
-              <s-color-field
-                label="Border color"
-                data-field="borderColor"
-                value={form.borderColor}
-              />
-              <s-number-field
-                label="Title size (px)"
-                data-field="titleSize"
-                value={String(form.titleSize)}
-                min={10}
-                max={48}
-              />
-              <s-number-field
-                label="Text size (px)"
-                data-field="textSize"
-                value={String(form.textSize)}
-                min={10}
-                max={36}
-              />
-              <s-number-field
-                label="Button size (px)"
-                data-field="buttonSize"
-                value={String(form.buttonSize)}
-                min={10}
-                max={36}
-              />
-              <s-number-field
-                label="Corner radius (px)"
-                data-field="cornerRadius"
-                value={String(form.cornerRadius)}
-                min={0}
-                max={50}
-              />
-            </s-stack>
-          </s-box>
-        </s-section>
+            {/* Design */}
+            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+              <s-stack direction="block" gap="base">
+                <s-heading>Design</s-heading>
+                <s-text-field
+                  label="Title text"
+                  data-field="titleText"
+                  value={form.titleText}
+                />
+                <s-text-field
+                  label="Button text"
+                  data-field="buttonText"
+                  value={form.buttonText}
+                />
+
+                <s-stack direction="inline" gap="base">
+                  <s-color-field
+                    label="Button color"
+                    data-field="buttonColor"
+                    value={form.buttonColor}
+                  />
+                  <s-color-field
+                    label="Background"
+                    data-field="backgroundColor"
+                    value={form.backgroundColor}
+                  />
+                  <s-color-field
+                    label="Border"
+                    data-field="borderColor"
+                    value={form.borderColor}
+                  />
+                </s-stack>
+
+                <s-stack direction="inline" gap="base">
+                  <s-number-field
+                    label="Title size"
+                    data-field="titleSize"
+                    value={String(form.titleSize)}
+                    min={10}
+                    max={48}
+                  />
+                  <s-number-field
+                    label="Text size"
+                    data-field="textSize"
+                    value={String(form.textSize)}
+                    min={10}
+                    max={36}
+                  />
+                </s-stack>
+
+                <s-stack direction="inline" gap="base">
+                  <s-number-field
+                    label="Button size"
+                    data-field="buttonSize"
+                    value={String(form.buttonSize)}
+                    min={10}
+                    max={36}
+                  />
+                  <s-number-field
+                    label="Corner radius"
+                    data-field="cornerRadius"
+                    value={String(form.cornerRadius)}
+                    min={0}
+                    max={50}
+                  />
+                </s-stack>
+              </s-stack>
+            </s-box>
+          </div>
+
+          {/* ─── Right column: live preview ─── */}
+          <div style={{ position: "sticky", top: "16px" }}>
+            <UpsellPreview form={form} products={selectedProducts} />
+          </div>
+        </div>
       </s-page>
     </div>
   );

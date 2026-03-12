@@ -314,9 +314,9 @@ export function OfferForm({
                   label="Discount percentage"
                   data-field="discountPercentage"
                   value={String(form.discountPercentage)}
-                  min={0.01}
+                  min={1}
                   max={100}
-                  step={0.01}
+                  step={1}
                 />
                 {errors.discountPercentage && (
                   <s-banner tone="critical">

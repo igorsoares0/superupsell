@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
@@ -110,52 +111,69 @@ export default function Analytics() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  function updateFilter(key: string, value: string) {
+  const periodRef = useRef<any>(null);
+  const surfaceRef = useRef<any>(null);
+  const updateFilterRef = useRef((key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
     params.set(key, value);
     navigate(`?${params.toString()}`);
-  }
+  });
+  updateFilterRef.current = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set(key, value);
+    navigate(`?${params.toString()}`);
+  };
+
+  useEffect(() => {
+    const periodEl = periodRef.current;
+    const surfaceEl = surfaceRef.current;
+    if (periodEl) periodEl.value = period;
+    if (surfaceEl) surfaceEl.value = surface;
+  });
+
+  useEffect(() => {
+    const periodEl = periodRef.current;
+    const surfaceEl = surfaceRef.current;
+
+    const onPeriod = () => {
+      requestAnimationFrame(() => {
+        if (periodEl) updateFilterRef.current("period", periodEl.value);
+      });
+    };
+    const onSurface = () => {
+      requestAnimationFrame(() => {
+        if (surfaceEl) updateFilterRef.current("surface", surfaceEl.value);
+      });
+    };
+
+    periodEl?.addEventListener("change", onPeriod);
+    surfaceEl?.addEventListener("change", onSurface);
+    return () => {
+      periodEl?.removeEventListener("change", onPeriod);
+      surfaceEl?.removeEventListener("change", onSurface);
+    };
+  }, []);
 
   return (
     <s-page heading="Analytics">
       {/* Filters */}
       <s-section>
         <s-stack direction="inline" gap="large-200" align-items="center">
-          <div>
-            <label htmlFor="su-period" style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: 4 }}>
-              Period
-            </label>
-            <select
-              id="su-period"
-              value={period}
-              onChange={(e) => updateFilter("period", e.target.value)}
-              style={{ fontSize: "14px", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc", minWidth: 160 }}
-            >
-              {PERIOD_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <s-select ref={periodRef} label="Period" value={period}>
+            {PERIOD_OPTIONS.map((o) => (
+              <s-option key={o.value} value={o.value}>
+                {o.label}
+              </s-option>
+            ))}
+          </s-select>
 
-          <div>
-            <label htmlFor="su-surface" style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: 4 }}>
-              Surface
-            </label>
-            <select
-              id="su-surface"
-              value={surface}
-              onChange={(e) => updateFilter("surface", e.target.value)}
-              style={{ fontSize: "14px", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc", minWidth: 160 }}
-            >
-              {SURFACE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <s-select ref={surfaceRef} label="Surface" value={surface}>
+            {SURFACE_OPTIONS.map((o) => (
+              <s-option key={o.value} value={o.value}>
+                {o.label}
+              </s-option>
+            ))}
+          </s-select>
         </s-stack>
       </s-section>
 

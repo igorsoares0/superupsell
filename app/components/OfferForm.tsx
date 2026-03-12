@@ -73,6 +73,8 @@ const NUMBER_FIELDS = new Set([
   "cornerRadius",
 ]);
 
+const BOOLEAN_FIELDS = new Set(["isActive", "showVariants", "showImage"]);
+
 /** Attach a native click listener to a ref, avoiding React synthetic events
  *  which don't work on Polaris web components in React 18. */
 function useNativeClick(
@@ -91,6 +93,30 @@ function useNativeClick(
   }, [ref]);
 }
 
+/** Attach a native change listener to an <s-switch> ref.
+ *  The change event has composed:false so it doesn't cross Shadow DOM,
+ *  but <s-switch> re-dispatches a click on the host — we toggle on click. */
+function useSwitchToggle(
+  ref: React.RefObject<any>,
+  setter: (checked: boolean) => void,
+) {
+  const setterRef = useRef(setter);
+  setterRef.current = setter;
+
+  useEffect(() => {
+    const el = ref.current as HTMLElement | null;
+    if (!el) return;
+    const listener = () => {
+      // After click, the web component updates its checked property
+      requestAnimationFrame(() => {
+        setterRef.current((el as any).checked);
+      });
+    };
+    el.addEventListener("click", listener);
+    return () => el.removeEventListener("click", listener);
+  }, [ref]);
+}
+
 export function OfferForm({
   offer,
   surfaceLabel: surfLabel,
@@ -104,6 +130,9 @@ export function OfferForm({
   const saveRef = useRef<any>(null);
   const pickProductsRef = useRef<any>(null);
   const pickTargetsRef = useRef<any>(null);
+  const isActiveRef = useRef<any>(null);
+  const showVariantsRef = useRef<any>(null);
+  const showImageRef = useRef<any>(null);
 
   const isEditing = Boolean(offer?.id);
   const isSaving = navigation.state === "submitting";
@@ -155,7 +184,7 @@ export function OfferForm({
     const handleInput = (e: Event) => {
       const target = e.target as HTMLElement;
       const field = target.getAttribute("data-field");
-      if (!field) return;
+      if (!field || BOOLEAN_FIELDS.has(field)) return;
       const value = (target as any).value;
       if (NUMBER_FIELDS.has(field)) {
         setForm((prev) => ({ ...prev, [field]: Number(value) || 0 }));
@@ -168,7 +197,7 @@ export function OfferForm({
       const target = e.target as HTMLElement;
       const field = target.getAttribute("data-field");
       if (!field) return;
-      if ("checked" in target) {
+      if (BOOLEAN_FIELDS.has(field)) {
         setForm((prev) => ({ ...prev, [field]: (target as any).checked }));
       } else {
         setForm((prev) => ({ ...prev, [field]: (target as any).value }));
@@ -255,6 +284,9 @@ export function OfferForm({
   useNativeClick(saveRef, handleSave);
   useNativeClick(pickProductsRef, pickProducts);
   useNativeClick(pickTargetsRef, pickTargets);
+  useSwitchToggle(isActiveRef, (v) => setForm((prev) => ({ ...prev, isActive: v })));
+  useSwitchToggle(showVariantsRef, (v) => setForm((prev) => ({ ...prev, showVariants: v })));
+  useSwitchToggle(showImageRef, (v) => setForm((prev) => ({ ...prev, showImage: v })));
 
   // ─── Render ───
   return (
@@ -325,8 +357,8 @@ export function OfferForm({
                 )}
 
                 <s-switch
+                  ref={isActiveRef}
                   label="Active"
-                  data-field="isActive"
                   checked={form.isActive || undefined}
                 />
               </s-stack>
@@ -415,14 +447,14 @@ export function OfferForm({
                 </s-select>
 
                 <s-switch
+                  ref={showVariantsRef}
                   label="Show product variants"
-                  data-field="showVariants"
                   checked={form.showVariants || undefined}
                 />
 
                 <s-switch
+                  ref={showImageRef}
                   label="Show product image"
-                  data-field="showImage"
                   checked={form.showImage || undefined}
                 />
               </s-stack>

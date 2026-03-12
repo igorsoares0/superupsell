@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 type UpsellProduct = {
   productId: string;
@@ -119,29 +119,117 @@ export function UpsellPreview({ form, products }: Props) {
           )}
 
           {/* Product list */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: form.layout === "slider" ? "row" : "column",
-              gap: "10px",
-              overflowX: form.layout === "slider" ? "auto" : undefined,
-            }}
-          >
-            {items.map((p) => (
-              <ProductCard
-                key={p.productId}
-                product={p}
-                form={form}
-                radius={radius}
-                mockPrice={MOCK_PRICE}
-                discountedPrice={discountedPrice}
-                buttonTextColor={buttonTextColor}
-              />
-            ))}
-          </div>
+          {form.layout === "slider" ? (
+            <SliderContainer
+              items={items}
+              form={form}
+              radius={radius}
+              mockPrice={MOCK_PRICE}
+              discountedPrice={discountedPrice}
+              buttonTextColor={buttonTextColor}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {items.map((p) => (
+                <ProductCard
+                  key={p.productId}
+                  product={p}
+                  form={form}
+                  radius={radius}
+                  mockPrice={MOCK_PRICE}
+                  discountedPrice={discountedPrice}
+                  buttonTextColor={buttonTextColor}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function SliderContainer({
+  items,
+  form,
+  radius,
+  mockPrice,
+  discountedPrice,
+  buttonTextColor,
+}: {
+  items: UpsellProduct[];
+  form: FormState;
+  radius: number;
+  mockPrice: number;
+  discountedPrice: number;
+  buttonTextColor: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const hasPrev = index > 0;
+  const hasNext = index < items.length - 1;
+
+  return (
+    <div style={{ position: "relative" }}>
+      {hasPrev && (
+        <ArrowButton direction="left" onClick={() => setIndex(index - 1)} />
+      )}
+      <ProductCard
+        key={items[index].productId}
+        product={items[index]}
+        form={form}
+        radius={radius}
+        mockPrice={mockPrice}
+        discountedPrice={discountedPrice}
+        buttonTextColor={buttonTextColor}
+      />
+      {hasNext && (
+        <ArrowButton direction="right" onClick={() => setIndex(index + 1)} />
+      )}
+      {items.length > 1 && (
+        <div style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: "#888" }}>
+          {index + 1} / {items.length}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ArrowButton({
+  direction,
+  onClick,
+}: {
+  direction: "left" | "right";
+  onClick: () => void;
+}) {
+  const isLeft = direction === "left";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        position: "absolute",
+        top: "50%",
+        [isLeft ? "left" : "right"]: "-12px",
+        transform: "translateY(-50%)",
+        zIndex: 2,
+        width: "32px",
+        height: "32px",
+        borderRadius: "50%",
+        border: "1px solid #ddd",
+        backgroundColor: "#fff",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "16px",
+        color: "#333",
+        padding: 0,
+      }}
+      aria-label={isLeft ? "Previous" : "Next"}
+    >
+      {isLeft ? "‹" : "›"}
+    </button>
   );
 }
 
@@ -170,7 +258,6 @@ function ProductCard({
     borderRadius: `${cardRadius}px`,
     padding: "10px 12px",
     backgroundColor: "#ffffff",
-    flex: form.layout === "slider" ? "0 0 300px" : undefined,
   };
 
   const imgBox: CSSProperties = {

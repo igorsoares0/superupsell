@@ -172,6 +172,7 @@
       document.body.appendChild(popup);
 
       bindButtons(popup);
+      initSliders();
 
       requestAnimationFrame(function () {
         overlay.style.opacity = "1";
@@ -199,11 +200,68 @@
     }, delay);
   }
 
+  // ─── Slider arrows ───
+
+  function initSliders() {
+    document.querySelectorAll(".superupsell-slider").forEach(function (slider) {
+      // Already initialized
+      if (slider.dataset.sliderInit) return;
+      slider.dataset.sliderInit = "1";
+
+      var cards = slider.querySelectorAll(".superupsell-card");
+      var total = cards.length;
+      if (total <= 1) return;
+
+      var index = 0;
+
+      function update() {
+        cards.forEach(function (card, i) {
+          card.style.display = i === index ? "flex" : "none";
+        });
+        if (prevBtn) prevBtn.style.display = index > 0 ? "flex" : "none";
+        if (nextBtn) nextBtn.style.display = index < total - 1 ? "flex" : "none";
+        if (counter) counter.textContent = (index + 1) + " / " + total;
+      }
+
+      var arrowStyle =
+        "position:absolute;top:50%;transform:translateY(-50%);z-index:2;" +
+        "width:32px;height:32px;border-radius:50%;border:1px solid #ddd;" +
+        "background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);cursor:pointer;" +
+        "display:flex;align-items:center;justify-content:center;font-size:18px;color:#333;padding:0;";
+
+      var prevBtn = document.createElement("button");
+      prevBtn.setAttribute("aria-label", "Previous");
+      prevBtn.style.cssText = arrowStyle + "left:-12px;";
+      prevBtn.textContent = "\u2039";
+      prevBtn.addEventListener("click", function () {
+        if (index > 0) { index--; update(); }
+      });
+
+      var nextBtn = document.createElement("button");
+      nextBtn.setAttribute("aria-label", "Next");
+      nextBtn.style.cssText = arrowStyle + "right:-12px;";
+      nextBtn.textContent = "\u203A";
+      nextBtn.addEventListener("click", function () {
+        if (index < total - 1) { index++; update(); }
+      });
+
+      var counter = document.createElement("div");
+      counter.style.cssText = "text-align:center;margin-top:8px;font-size:12px;color:#888;";
+
+      slider.style.position = "relative";
+      slider.appendChild(prevBtn);
+      slider.appendChild(nextBtn);
+      slider.appendChild(counter);
+      update();
+    });
+  }
+
   // ─── Init ───
 
   function init() {
     document.querySelectorAll(".superupsell-widget").forEach(bindButtons);
     trackImpressions();
+    initSliders();
     initPopup();
   }
 

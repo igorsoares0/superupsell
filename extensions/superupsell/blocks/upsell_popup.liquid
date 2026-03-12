@@ -57,7 +57,11 @@
             </div>
           {% endif %}
 
+          {% if offer.layout == 'slider' %}
+          <div class="superupsell-slider" style="position:relative;">
+          {% else %}
           <div style="display:flex;flex-direction:column;gap:10px;">
+          {% endif %}
             {% for p in offer.products %}
               {% assign prod = all_products[p.handle] %}
               {% if prod and prod.available %}

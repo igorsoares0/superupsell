@@ -46,7 +46,11 @@
         </div>
       {% endif %}
 
-      <div style="display:flex;flex-direction:{% if offer.layout == 'slider' %}row{% else %}column{% endif %};gap:10px;{% if offer.layout == 'slider' %}overflow-x:auto;{% endif %}">
+      {% if offer.layout == 'slider' %}
+      <div class="superupsell-slider" style="position:relative;">
+      {% else %}
+      <div style="display:flex;flex-direction:column;gap:10px;">
+      {% endif %}
         {% for p in offer.products %}
           {% assign prod = all_products[p.handle] %}
           {% if prod and prod.available %}
@@ -56,7 +60,7 @@
             {% assign first_variant = prod.selected_or_first_available_variant %}
             {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
 
-            <div class="superupsell-card" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.layout == 'slider' %}flex:0 0 300px;{% endif %}">
+            <div class="superupsell-card" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;">
 
               {% if offer.showImage and prod.featured_image %}
                 <img

@@ -290,6 +290,180 @@ export async function syncOfferMetafield(
   );
 }
 
+// ─── Discount Function sync (BL-020) ───
+
+const DISCOUNT_METAFIELD_KEY = "function-configuration";
+
+/**
+ * Find the discount function ID for our app.
+ */
+async function getDiscountFunctionId(
+  admin: { graphql: Function },
+): Promise<string | null> {
+  const res = await admin.graphql(`{
+    shopifyFunctions(first: 25) {
+      nodes { id apiType }
+    }
+  }`);
+  const data = await res.json();
+  const fn = data.data?.shopifyFunctions?.nodes?.find(
+    (n: any) => n.apiType === "discount",
+  );
+  return fn?.id ?? null;
+}
+
+/**
+ * Sync the Shopify automatic discount for an offer.
+ * Creates/updates/deletes the automatic discount linked to our function.
+ * Called after create, update, or toggle.
+ */
+export async function syncDiscountFunction(
+  admin: { graphql: Function },
+  offerId: string,
+) {
+  const offer = await prisma.upsellOffer.findFirst({
+    where: { id: offerId },
+    include: { products: true },
+  });
+  if (!offer) return;
+
+  const needsDiscount =
+    offer.isActive &&
+    Number(offer.discountPercentage) > 0 &&
+    offer.products.length > 0;
+
+  if (needsDiscount) {
+    const config = JSON.stringify({
+      percentage: Number(offer.discountPercentage),
+      discountLabel: offer.discountLabel,
+      productIds: offer.products.map((p) => p.productId),
+    });
+
+    if (offer.shopifyDiscountId) {
+      // Update the existing discount's config metafield
+      await admin.graphql(
+        `mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $metafields) {
+            metafields { id }
+            userErrors { field message }
+          }
+        }`,
+        {
+          variables: {
+            metafields: [
+              {
+                ownerId: offer.shopifyDiscountId,
+                namespace: METAFIELD_NAMESPACE,
+                key: DISCOUNT_METAFIELD_KEY,
+                value: config,
+                type: "json",
+              },
+            ],
+          },
+        },
+      );
+    } else {
+      // Create a new automatic discount linked to our function
+      const functionId = await getDiscountFunctionId(admin);
+      if (!functionId) {
+        console.error("SuperUpsell: discount function not found — deploy the extension first");
+        return;
+      }
+
+      const res = await admin.graphql(
+        `mutation discountCreate($discount: DiscountAutomaticAppInput!) {
+          discountAutomaticAppCreate(automaticAppDiscount: $discount) {
+            automaticAppDiscount { discountId }
+            userErrors { field message }
+          }
+        }`,
+        {
+          variables: {
+            discount: {
+              title: `SuperUpsell: ${offer.upsellName}`,
+              functionId,
+              startsAt: new Date().toISOString(),
+              discountClasses: ["PRODUCT"],
+              combinesWith: {
+                orderDiscounts: true,
+                productDiscounts: true,
+                shippingDiscounts: true,
+              },
+              metafields: [
+                {
+                  namespace: METAFIELD_NAMESPACE,
+                  key: DISCOUNT_METAFIELD_KEY,
+                  type: "json",
+                  value: config,
+                },
+              ],
+            },
+          },
+        },
+      );
+      const result = await res.json();
+      const errors =
+        result.data?.discountAutomaticAppCreate?.userErrors;
+      if (errors?.length > 0) {
+        console.error("SuperUpsell: discount create errors", errors);
+        return;
+      }
+
+      const discountId =
+        result.data?.discountAutomaticAppCreate?.automaticAppDiscount
+          ?.discountId;
+      if (discountId) {
+        await prisma.upsellOffer.update({
+          where: { id: offerId },
+          data: { shopifyDiscountId: discountId },
+        });
+      }
+    }
+  } else {
+    // Offer inactive or no discount — remove the Shopify discount if it exists
+    if (offer.shopifyDiscountId) {
+      await admin.graphql(
+        `mutation discountDelete($id: ID!) {
+          discountAutomaticDelete(id: $id) {
+            deletedAutomaticDiscountId
+            userErrors { field message }
+          }
+        }`,
+        { variables: { id: offer.shopifyDiscountId } },
+      );
+      await prisma.upsellOffer.update({
+        where: { id: offerId },
+        data: { shopifyDiscountId: null },
+      });
+    }
+  }
+}
+
+/**
+ * Clean up the Shopify discount before deleting an offer from the DB.
+ */
+export async function cleanupDiscountForOffer(
+  admin: { graphql: Function },
+  offerId: string,
+  shop: string,
+) {
+  const offer = await prisma.upsellOffer.findFirst({
+    where: { id: offerId, shop },
+    select: { shopifyDiscountId: true },
+  });
+  if (!offer?.shopifyDiscountId) return;
+
+  await admin.graphql(
+    `mutation discountDelete($id: ID!) {
+      discountAutomaticDelete(id: $id) {
+        deletedAutomaticDiscountId
+        userErrors { field message }
+      }
+    }`,
+    { variables: { id: offer.shopifyDiscountId } },
+  );
+}
+
 // ─── Mutations ───
 
 export async function createOffer(

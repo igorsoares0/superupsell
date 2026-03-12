@@ -7,6 +7,9 @@ type = "function"
 uid = "630829f6-2180-df6b-6a08-656aa871d3f31c3e344a"
 description = "t:description"
 
+  [extensions.ui]
+  enable_create = false
+
   [[extensions.targeting]]
   target = "cart.lines.discounts.generate.run"
   input_query = "src/cart_lines_discounts_generate_run.graphql"

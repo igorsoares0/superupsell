@@ -9,6 +9,8 @@ import {
   toggleOfferActive,
   deleteOffer,
   syncOfferMetafield,
+  syncDiscountFunction,
+  cleanupDiscountForOffer,
 } from "../models/offer.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -37,8 +39,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   switch (intent) {
     case "toggle":
       await toggleOfferActive(offerId, session.shop);
+      await syncDiscountFunction(admin, offerId);
       break;
     case "delete":
+      await cleanupDiscountForOffer(admin, offerId, session.shop);
       await deleteOffer(offerId, session.shop);
       break;
   }

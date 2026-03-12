@@ -86,6 +86,7 @@ model UpsellOffer {
   textSize           Int      @default(14)
   buttonSize         Int      @default(14)
   cornerRadius       Int      @default(8)
+  shopifyDiscountId  String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

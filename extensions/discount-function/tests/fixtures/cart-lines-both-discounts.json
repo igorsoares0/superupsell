@@ -7,51 +7,44 @@
         "lines": [
           {
             "id": "gid://shopify/CartLine/0",
-            "cost": {
-              "subtotalAmount": {
-                "amount": "6.0"
+            "quantity": 1,
+            "merchandise": {
+              "__typename": "ProductVariant",
+              "id": "gid://shopify/ProductVariant/100",
+              "product": {
+                "id": "gid://shopify/Product/1"
+              }
+            }
+          },
+          {
+            "id": "gid://shopify/CartLine/1",
+            "quantity": 2,
+            "merchandise": {
+              "__typename": "ProductVariant",
+              "id": "gid://shopify/ProductVariant/200",
+              "product": {
+                "id": "gid://shopify/Product/2"
               }
             }
           }
         ]
       },
       "discount": {
-        "discountClasses": ["PRODUCT", "ORDER", "SHIPPING"]
+        "discountClasses": ["PRODUCT"],
+        "metafield": {
+          "value": "{\"percentage\":15.0,\"discountLabel\":\"SuperUpsell: 15% OFF\",\"productIds\":[\"gid://shopify/Product/1\"]}"
+        }
       }
     },
-    "inputBytes": 126,
+    "inputBytes": 400,
     "output": {
       "operations": [
-        {
-          "orderDiscountsAdd": {
-            "candidates": [
-              {
-                "associatedDiscountCode": null,
-                "conditions": null,
-                "message": "10% OFF ORDER",
-                "targets": [
-                  {
-                    "orderSubtotal": {
-                      "excludedCartLineIds": []
-                    }
-                  }
-                ],
-                "value": {
-                  "percentage": {
-                    "value": "10.0"
-                  }
-                }
-              }
-            ],
-            "selectionStrategy": "FIRST"
-          }
-        },
         {
           "productDiscountsAdd": {
             "candidates": [
               {
                 "associatedDiscountCode": null,
-                "message": "20% OFF PRODUCT",
+                "message": "SuperUpsell: 15% OFF",
                 "targets": [
                   {
                     "cartLine": {
@@ -62,7 +55,7 @@
                 ],
                 "value": {
                   "percentage": {
-                    "value": "20.0"
+                    "value": "15.0"
                   }
                 }
               }

@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  {{ 'superupsell.js' | asset_url | script_tag }}
+  <script src="{{ 'superupsell.js' | asset_url }}" defer></script>
 {% endif %}
 
 {% schema %}

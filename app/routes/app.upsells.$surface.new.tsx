@@ -8,6 +8,7 @@ import {
   validateOfferData,
   createOffer,
   syncOfferMetafield,
+  syncDiscountFunction,
 } from "../models/offer.server";
 import { OfferForm } from "../components/OfferForm";
 
@@ -32,8 +33,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { errors };
   }
 
-  await createOffer(session.shop, surface, data);
+  const offer = await createOffer(session.shop, surface, data);
   await syncOfferMetafield(admin, session.shop, surface);
+  await syncDiscountFunction(admin, offer.id);
   return redirect(`/app/upsells/${params.surface}`);
 };
 

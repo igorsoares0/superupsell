@@ -41,7 +41,7 @@
     }
   }
 
-  /** Track impressions with IntersectionObserver (once per session per offer). */
+  /** Track impressions with IntersectionObserver (once per page view per offer). */
   function trackImpressions() {
     if (!("IntersectionObserver" in window)) return;
 
@@ -49,17 +49,8 @@
       function (entries) {
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
-          var el = entry.target;
-          var key = "su_imp_" + (el.dataset.offerId || "");
-
-          // Deduplicate per session
-          try {
-            if (sessionStorage.getItem(key)) return;
-            sessionStorage.setItem(key, "1");
-          } catch (_) {}
-
-          trackEvent("impression", el);
-          observer.unobserve(el);
+          trackEvent("impression", entry.target);
+          observer.unobserve(entry.target);
         });
       },
       { threshold: 0.5 }
@@ -190,13 +181,7 @@
       // Track popup impression
       var popupContent = popup.querySelector("[data-offer-id]");
       if (popupContent) {
-        var key = "su_imp_" + popupContent.dataset.offerId;
-        try {
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, "1");
-            trackEvent("impression", popupContent);
-          }
-        } catch (_) {}
+        trackEvent("impression", popupContent);
       }
 
       function close() {

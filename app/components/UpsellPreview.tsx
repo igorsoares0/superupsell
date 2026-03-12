@@ -277,14 +277,15 @@ function ProductCard({
     color: buttonTextColor,
     border: "none",
     borderRadius: `${Math.max(cardRadius - 2, 2)}px`,
-    padding: "8px 14px",
+    padding: "6px 12px",
     fontSize: `${form.buttonSize}px`,
     fontWeight: 500,
     cursor: "pointer",
     whiteSpace: "nowrap",
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "4px",
+    flexShrink: 0,
   };
 
   return (
@@ -367,9 +368,7 @@ function ProductCard({
 
       {/* Right: add button */}
       <div style={btn}>
-        <span style={{ fontSize: `${form.buttonSize + 2}px`, lineHeight: 1 }}>
-          +
-        </span>
+        <span style={{ lineHeight: 1 }}>+</span>
         {form.buttonText || "Add"}
       </div>
     </div>

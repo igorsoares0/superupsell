@@ -567,6 +567,7 @@ export function OfferForm({
                     value={String(form.titleSize)}
                     min={10}
                     max={48}
+                    step={1}
                   />
                   <s-number-field
                     label="Text size"
@@ -574,6 +575,7 @@ export function OfferForm({
                     value={String(form.textSize)}
                     min={10}
                     max={36}
+                    step={1}
                   />
                 </s-stack>
 
@@ -583,7 +585,8 @@ export function OfferForm({
                     data-field="buttonSize"
                     value={String(form.buttonSize)}
                     min={10}
-                    max={36}
+                    max={24}
+                    step={1}
                   />
                   <s-number-field
                     label="Corner radius"
@@ -591,6 +594,7 @@ export function OfferForm({
                     value={String(form.cornerRadius)}
                     min={0}
                     max={50}
+                    step={1}
                   />
                 </s-stack>
               </s-stack>

@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
@@ -111,64 +110,52 @@ export default function Analytics() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const periodRef = useRef<any>(null);
-  const surfaceRef = useRef<any>(null);
-
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams);
     params.set(key, value);
     navigate(`?${params.toString()}`);
   }
 
-  // Native change listeners for selects
-  useEffect(() => {
-    const periodEl = periodRef.current as HTMLSelectElement | null;
-    const surfaceEl = surfaceRef.current as HTMLSelectElement | null;
-
-    const onPeriod = (e: Event) => {
-      updateFilter("period", (e.target as HTMLSelectElement).value);
-    };
-    const onSurface = (e: Event) => {
-      updateFilter("surface", (e.target as HTMLSelectElement).value);
-    };
-
-    periodEl?.addEventListener("change", onPeriod);
-    surfaceEl?.addEventListener("change", onSurface);
-
-    return () => {
-      periodEl?.removeEventListener("change", onPeriod);
-      surfaceEl?.removeEventListener("change", onSurface);
-    };
-  });
-
   return (
     <s-page heading="Analytics">
       {/* Filters */}
       <s-section>
         <s-stack direction="inline" gap="large-200" align-items="center">
-          <s-select
-            ref={periodRef}
-            label="Period"
-            value={period}
-          >
-            {PERIOD_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </s-select>
+          <div>
+            <label htmlFor="su-period" style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: 4 }}>
+              Period
+            </label>
+            <select
+              id="su-period"
+              value={period}
+              onChange={(e) => updateFilter("period", e.target.value)}
+              style={{ fontSize: "14px", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc", minWidth: 160 }}
+            >
+              {PERIOD_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <s-select
-            ref={surfaceRef}
-            label="Surface"
-            value={surface}
-          >
-            {SURFACE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </s-select>
+          <div>
+            <label htmlFor="su-surface" style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: 4 }}>
+              Surface
+            </label>
+            <select
+              id="su-surface"
+              value={surface}
+              onChange={(e) => updateFilter("surface", e.target.value)}
+              style={{ fontSize: "14px", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc", minWidth: 160 }}
+            >
+              {SURFACE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </s-stack>
       </s-section>
 

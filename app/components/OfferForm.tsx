@@ -228,14 +228,18 @@ export function OfferForm({
       multiple: true,
     });
     if (selected) {
-      setSelectedProducts(
-        selected.map((p: any) => ({
-          productId: p.id,
-          title: p.title,
-          imageUrl: p.images?.[0]?.originalSrc || p.featuredImage?.url,
-          variantIds: p.variants?.map((v: any) => v.id),
-        })),
-      );
+      setSelectedProducts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.productId));
+        const newItems = selected
+          .filter((p: any) => !existingIds.has(p.id))
+          .map((p: any) => ({
+            productId: p.id,
+            title: p.title,
+            imageUrl: p.images?.[0]?.originalSrc || p.featuredImage?.url,
+            variantIds: p.variants?.map((v: any) => v.id),
+          }));
+        return [...prev, ...newItems];
+      });
     }
   }, [shopify]);
 
@@ -248,14 +252,18 @@ export function OfferForm({
       multiple: true,
     });
     if (selected) {
-      setSelectedTargets(
-        selected.map((r: any) => ({
-          type,
-          id: r.id,
-          title: r.title,
-          imageUrl: r.image?.originalSrc || r.images?.[0]?.originalSrc || r.featuredImage?.url,
-        })),
-      );
+      setSelectedTargets((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const newItems = selected
+          .filter((r: any) => !existingIds.has(r.id))
+          .map((r: any) => ({
+            type,
+            id: r.id,
+            title: r.title,
+            imageUrl: r.image?.originalSrc || r.images?.[0]?.originalSrc || r.featuredImage?.url,
+          }));
+        return [...prev, ...newItems];
+      });
     }
   }, [shopify, form.targetMode]);
 

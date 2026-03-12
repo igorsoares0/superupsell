@@ -8,6 +8,7 @@ import {
   parseOfferFormData,
   validateOfferData,
   updateOffer,
+  syncOfferMetafield,
 } from "../models/offer.server";
 import { OfferForm } from "../components/OfferForm";
 
@@ -23,7 +24,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const surface = parseSurfaceSlug(params.surface!);
   if (!surface) throw new Response("Invalid surface", { status: 404 });
 
@@ -36,6 +37,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 
   await updateOffer(params.id!, session.shop, data);
+  await syncOfferMetafield(admin, session.shop, surface);
   return redirect(`/app/upsells/${params.surface}`);
 };
 

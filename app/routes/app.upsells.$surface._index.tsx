@@ -8,6 +8,7 @@ import {
   getOffersBySurface,
   toggleOfferActive,
   deleteOffer,
+  syncOfferMetafield,
 } from "../models/offer.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -25,7 +26,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
+  const surface = parseSurfaceSlug(params.surface!);
+  if (!surface) throw new Response("Invalid surface", { status: 404 });
+
   const formData = await request.formData();
   const intent = formData.get("intent");
   const offerId = formData.get("offerId") as string;
@@ -38,6 +42,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       await deleteOffer(offerId, session.shop);
       break;
   }
+
+  // Sync metafield after any change
+  await syncOfferMetafield(admin, session.shop, surface);
 
   return { ok: true };
 };

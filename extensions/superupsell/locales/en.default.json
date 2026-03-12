@@ -1,10 +1,16 @@
 {
-  "ratings": {
-    "stars": {
-      "label": "Ratings"
+  "superupsell": {
+    "product_page": {
+      "name": "Product Page Upsell",
+      "description": "Display upsell offers on product pages"
     },
-    "home": {
-      "recommendationText": "Recommended Product!"
+    "cart": {
+      "name": "Cart Upsell",
+      "description": "Display upsell offers on the cart page"
+    },
+    "popup": {
+      "name": "Popup Upsell",
+      "description": "Show upsell offers in a popup overlay"
     }
   }
 }

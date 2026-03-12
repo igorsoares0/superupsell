@@ -164,6 +164,132 @@ export async function getOfferById(id: string, shop: string) {
   return offer ? serializeOffer(offer) : null;
 }
 
+// ─── Metafield sync (BL-012) ───
+
+const METAFIELD_NAMESPACE = "$app:superupsell";
+
+/**
+ * Sync the active offer for a surface to a Shop metafield.
+ * The storefront reads this metafield in Liquid — no API calls needed.
+ */
+export async function syncOfferMetafield(
+  admin: { graphql: Function },
+  shop: string,
+  surface: Surface,
+) {
+  // 1. Find the most recently updated active offer for this surface
+  const offer = await prisma.upsellOffer.findFirst({
+    where: { shop, surface, isActive: true },
+    include: {
+      products: { orderBy: { position: "asc" } },
+      targets: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  // 2. Get Shop GID
+  const shopRes = await admin.graphql(`{ shop { id } }`);
+  const shopData = await shopRes.json();
+  const shopGid = shopData.data.shop.id;
+
+  // 3. If no active offer, write null to clear the metafield
+  if (!offer) {
+    await admin.graphql(
+      `mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields { id }
+          userErrors { field message }
+        }
+      }`,
+      {
+        variables: {
+          metafields: [
+            {
+              ownerId: shopGid,
+              namespace: METAFIELD_NAMESPACE,
+              key: surface,
+              value: "null",
+              type: "json",
+            },
+          ],
+        },
+      },
+    );
+    return;
+  }
+
+  // 4. Fetch product handles from Shopify
+  const productGids = offer.products.map((p) => p.productId);
+  let handleMap = new Map<string, string>();
+
+  if (productGids.length > 0) {
+    const prodRes = await admin.graphql(
+      `query getHandles($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on Product { id handle }
+        }
+      }`,
+      { variables: { ids: productGids } },
+    );
+    const prodData = await prodRes.json();
+    for (const node of prodData.data?.nodes ?? []) {
+      if (node?.id && node?.handle) handleMap.set(node.id, node.handle);
+    }
+  }
+
+  // 5. Build metafield JSON
+  const value = {
+    id: offer.id,
+    isActive: true,
+    titleText: offer.titleText,
+    buttonText: offer.buttonText,
+    buttonColor: offer.buttonColor,
+    backgroundColor: offer.backgroundColor,
+    borderColor: offer.borderColor,
+    titleSize: offer.titleSize,
+    textSize: offer.textSize,
+    buttonSize: offer.buttonSize,
+    cornerRadius: offer.cornerRadius,
+    discountPercentage: Number(offer.discountPercentage),
+    discountLabel: offer.discountLabel,
+    showVariants: offer.showVariants,
+    showImage: offer.showImage,
+    layout: offer.layout,
+    targetMode: offer.targetMode,
+    targets: offer.targets.map((t) => ({
+      targetType: t.targetType,
+      targetId: t.targetId,
+    })),
+    products: offer.products.map((p) => ({
+      handle: handleMap.get(p.productId) ?? "",
+      position: p.position,
+    })),
+  };
+
+  // 6. Write metafield
+  await admin.graphql(
+    `mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields { id }
+        userErrors { field message }
+      }
+    }`,
+    {
+      variables: {
+        metafields: [
+          {
+            ownerId: shopGid,
+            namespace: METAFIELD_NAMESPACE,
+            key: surface,
+            value: JSON.stringify(value),
+            type: "json",
+          },
+        ],
+      },
+    },
+  );
+}
+
 // ─── Mutations ───
 
 export async function createOffer(

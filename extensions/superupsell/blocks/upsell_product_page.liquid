@@ -1,0 +1,129 @@
+{% assign offer = shop.metafields["$app:superupsell"]["product_page"].value %}
+
+{% if offer and offer.isActive %}
+  {% comment %} Target matching: check if this product should see the upsell {% endcomment %}
+  {% assign should_show = false %}
+
+  {% if offer.targetMode == 'all_products' %}
+    {% assign should_show = true %}
+  {% elsif offer.targetMode == 'specific_products' %}
+    {% for target in offer.targets %}
+      {% assign target_id = target.targetId | split: '/' | last | plus: 0 %}
+      {% if product.id == target_id %}
+        {% assign should_show = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+  {% elsif offer.targetMode == 'collections' %}
+    {% for collection in product.collections %}
+      {% for target in offer.targets %}
+        {% assign target_id = target.targetId | split: '/' | last | plus: 0 %}
+        {% if collection.id == target_id %}
+          {% assign should_show = true %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+      {% if should_show %}{% break %}{% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {% if should_show %}
+    {% assign radius = offer.cornerRadius | default: 8 %}
+    {% assign card_radius = radius | minus: 2 | at_least: 0 %}
+    {% assign img_radius = card_radius | minus: 2 | at_least: 0 %}
+
+    <div class="superupsell-widget" style="background:{{ offer.backgroundColor | default: '#fff' }};border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ radius }}px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:16px 0;">
+
+      <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">
+        {{ offer.titleText | default: 'You may also like' }}
+      </div>
+
+      {% if offer.discountLabel != blank and offer.discountPercentage > 0 %}
+        <div style="margin-bottom:10px;">
+          <span style="display:inline-block;background:#e53e3e;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">
+            {{ offer.discountLabel }} — {{ offer.discountPercentage }}% off
+          </span>
+        </div>
+      {% endif %}
+
+      <div style="display:flex;flex-direction:{% if offer.layout == 'slider' %}row{% else %}column{% endif %};gap:10px;{% if offer.layout == 'slider' %}overflow-x:auto;{% endif %}">
+        {% for p in offer.products %}
+          {% assign prod = all_products[p.handle] %}
+          {% if prod and prod.available %}
+            {% assign original_price = prod.price %}
+            {% assign discount_amount = original_price | times: offer.discountPercentage | divided_by: 100 %}
+            {% assign discounted_price = original_price | minus: discount_amount %}
+            {% assign first_variant = prod.selected_or_first_available_variant %}
+            {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
+
+            <div class="superupsell-card" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.layout == 'slider' %}flex:0 0 300px;{% endif %}">
+
+              {% if offer.showImage and prod.featured_image %}
+                <img
+                  src="{{ prod.featured_image | image_url: width: 128 }}"
+                  alt="{{ prod.featured_image.alt | escape }}"
+                  width="64" height="64"
+                  loading="lazy"
+                  style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;"
+                >
+              {% elsif offer.showImage %}
+                <div style="width:64px;height:64px;min-width:64px;background:#f5f5f5;border-radius:{{ img_radius }}px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;">
+                  No img
+                </div>
+              {% endif %}
+
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ prod.title }}
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                  <span style="font-weight:600;color:#1a1a1a;font-size:{{ offer.textSize | default: 14 | minus: 1 | at_least: 10 }}px;">
+                    {{ discounted_price | money }}
+                  </span>
+                  {% if offer.discountPercentage > 0 %}
+                    <span style="text-decoration:line-through;color:#999;font-size:{{ offer.textSize | default: 14 | minus: 2 | at_least: 10 }}px;">
+                      {{ original_price | money }}
+                    </span>
+                  {% endif %}
+                </div>
+
+                {% if offer.showVariants and prod.variants.size > 1 %}
+                  <select
+                    class="superupsell-variant-select"
+                    data-product-id="{{ prod.id }}"
+                    style="font-size:12px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-top:4px;max-width:120px;"
+                  >
+                    {% for variant in prod.variants %}
+                      {% if variant.available %}
+                        <option value="{{ variant.id }}">{{ variant.title }}{% if variant.price != prod.price %} - {{ variant.price | money }}{% endif %}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                {% endif %}
+              </div>
+
+              <button
+                class="superupsell-add-btn"
+                data-variant-id="{{ first_variant.id }}"
+                style="background:{{ offer.buttonColor | default: '#000' }};color:#fff;border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;"
+              >
+                <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
+                {{ offer.buttonText | default: 'Add' }}
+              </button>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {{ 'superupsell.js' | asset_url | script_tag }}
+  {% endif %}
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product Page Upsell",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

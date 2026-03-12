@@ -3,10 +3,11 @@ import { useSubmit, useNavigation } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { UpsellPreview } from "./UpsellPreview";
 
-type Target = { type: string; id: string; title?: string };
+type Target = { type: string; id: string; title?: string; imageUrl?: string };
 type UpsellProduct = {
   productId: string;
   title?: string;
+  imageUrl?: string;
   variantIds?: string[];
 };
 
@@ -29,12 +30,14 @@ export type SerializedOffer = {
   buttonSize: number;
   cornerRadius: number;
   isActive: boolean;
-  targets: Array<{ id: string; targetType: string; targetId: string }>;
+  targets: Array<{ id: string; targetType: string; targetId: string; title?: string; imageUrl?: string }>;
   products: Array<{
     id: string;
     productId: string;
     variantIds: string[] | null;
     position: number;
+    title?: string;
+    imageUrl?: string;
   }>;
 };
 
@@ -165,7 +168,8 @@ export function OfferForm({
     () =>
       offer?.products.map((p) => ({
         productId: p.productId,
-        title: undefined,
+        title: p.title,
+        imageUrl: p.imageUrl,
         variantIds: p.variantIds ?? undefined,
       })) ?? [],
   );
@@ -175,6 +179,8 @@ export function OfferForm({
       offer?.targets.map((t) => ({
         type: t.targetType,
         id: t.targetId,
+        title: t.title,
+        imageUrl: t.imageUrl,
       })) ?? [],
   );
 
@@ -226,6 +232,7 @@ export function OfferForm({
         selected.map((p: any) => ({
           productId: p.id,
           title: p.title,
+          imageUrl: p.images?.[0]?.originalSrc || p.featuredImage?.url,
           variantIds: p.variants?.map((v: any) => v.id),
         })),
       );
@@ -246,6 +253,7 @@ export function OfferForm({
           type,
           id: r.id,
           title: r.title,
+          imageUrl: r.image?.originalSrc || r.images?.[0]?.originalSrc || r.featuredImage?.url,
         })),
       );
     }
@@ -429,13 +437,20 @@ export function OfferForm({
                       ({selectedTargets.length} selected)
                     </s-button>
                     {selectedTargets.length > 0 && (
-                      <s-stack direction="inline" gap="small-100">
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {selectedTargets.map((t) => (
-                          <s-badge key={t.id}>
-                            {t.title || t.id}
-                          </s-badge>
+                          <ResourceItem
+                            key={t.id}
+                            title={t.title || t.id}
+                            imageUrl={t.imageUrl}
+                            onRemove={() =>
+                              setSelectedTargets((prev) =>
+                                prev.filter((x) => x.id !== t.id),
+                              )
+                            }
+                          />
                         ))}
-                      </s-stack>
+                      </div>
                     )}
                   </>
                 )}
@@ -453,13 +468,20 @@ export function OfferForm({
                   Select upsell products ({selectedProducts.length} selected)
                 </s-button>
                 {selectedProducts.length > 0 && (
-                  <s-stack direction="inline" gap="small-100">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {selectedProducts.map((p) => (
-                      <s-badge key={p.productId}>
-                        {p.title || p.productId}
-                      </s-badge>
+                      <ResourceItem
+                        key={p.productId}
+                        title={p.title || p.productId}
+                        imageUrl={p.imageUrl}
+                        onRemove={() =>
+                          setSelectedProducts((prev) =>
+                            prev.filter((x) => x.productId !== p.productId),
+                          )
+                        }
+                      />
                     ))}
-                  </s-stack>
+                  </div>
                 )}
                 {errors.upsellProducts && (
                   <s-banner tone="critical">
@@ -573,6 +595,80 @@ export function OfferForm({
           </div>
         </div>
       </s-page>
+    </div>
+  );
+}
+
+function ResourceItem({
+  title,
+  imageUrl,
+  onRemove,
+}: {
+  title: string;
+  imageUrl?: string;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "8px 10px",
+        border: "1px solid #e0e0e0",
+        borderRadius: "8px",
+        backgroundColor: "#fafafa",
+      }}
+    >
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={title}
+          style={{
+            width: 40,
+            height: 40,
+            objectFit: "cover",
+            borderRadius: 6,
+            border: "1px solid #e0e0e0",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 6,
+            backgroundColor: "#e0e0e0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "12px",
+            color: "#888",
+          }}
+        >
+          N/A
+        </div>
+      )}
+      <span style={{ flex: 1, fontSize: "13px", fontWeight: 500 }}>
+        {title}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "18px",
+          color: "#888",
+          padding: "2px 6px",
+          borderRadius: 4,
+          lineHeight: 1,
+        }}
+        aria-label={`Remove ${title}`}
+      >
+        &times;
+      </button>
     </div>
   );
 }

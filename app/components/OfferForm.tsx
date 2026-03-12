@@ -289,7 +289,7 @@ export function OfferForm({
             style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
             {/* Basic Settings */}
-            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
               <s-stack direction="block" gap="base">
                 <s-heading>Basic Settings</s-heading>
                 <s-text-field
@@ -330,10 +330,10 @@ export function OfferForm({
                   checked={form.isActive || undefined}
                 />
               </s-stack>
-            </s-box>
+            </div>
 
             {/* Target Mode */}
-            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
               <s-stack direction="block" gap="base">
                 <s-heading>Target Products</s-heading>
                 <s-select
@@ -375,10 +375,10 @@ export function OfferForm({
                   <s-banner tone="critical">{errors.targets}</s-banner>
                 )}
               </s-stack>
-            </s-box>
+            </div>
 
             {/* Upsell Products */}
-            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
               <s-stack direction="block" gap="base">
                 <s-heading>Upsell Products</s-heading>
                 <s-button ref={pickProductsRef}>
@@ -399,10 +399,10 @@ export function OfferForm({
                   </s-banner>
                 )}
               </s-stack>
-            </s-box>
+            </div>
 
             {/* Display Options */}
-            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
               <s-stack direction="block" gap="base">
                 <s-heading>Display Options</s-heading>
                 <s-select
@@ -426,10 +426,10 @@ export function OfferForm({
                   checked={form.showImage || undefined}
                 />
               </s-stack>
-            </s-box>
+            </div>
 
             {/* Design */}
-            <s-box padding="large-300" borderWidth="base" borderRadius="base">
+            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
               <s-stack direction="block" gap="base">
                 <s-heading>Design</s-heading>
                 <s-text-field
@@ -495,7 +495,7 @@ export function OfferForm({
                   />
                 </s-stack>
               </s-stack>
-            </s-box>
+            </div>
           </div>
 
           {/* ─── Right column: live preview ─── */}

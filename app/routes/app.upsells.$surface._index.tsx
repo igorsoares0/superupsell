@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
@@ -44,80 +45,114 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 export default function OfferList() {
   const { offers, label, slug } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
 
-  const handleToggle = (offerId: string) => {
-    fetcher.submit({ intent: "toggle", offerId }, { method: "POST" });
-  };
+  // Native click handler — React 18 onClick doesn't work on s-button
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  const handleDelete = (offerId: string) => {
-    fetcher.submit({ intent: "delete", offerId }, { method: "POST" });
-  };
+    const handleClick = (e: Event) => {
+      const path = e.composedPath();
+      const actionEl = path.find(
+        (el) =>
+          el instanceof HTMLElement && el.hasAttribute("data-offer-action"),
+      ) as HTMLElement | undefined;
+      if (!actionEl) return;
+
+      const action = actionEl.getAttribute("data-offer-action");
+      const offerId = actionEl.getAttribute("data-offer-id");
+      if (!offerId) return;
+
+      if (action === "toggle") {
+        fetcherRef.current.submit(
+          { intent: "toggle", offerId },
+          { method: "POST" },
+        );
+      }
+      if (action === "delete") {
+        fetcherRef.current.submit(
+          { intent: "delete", offerId },
+          { method: "POST" },
+        );
+      }
+    };
+
+    container.addEventListener("click", handleClick);
+    return () => container.removeEventListener("click", handleClick);
+  }, []);
 
   return (
-    <s-page heading={`${label} Upsell`}>
-      <s-link slot="breadcrumb-actions" href="/app">
-        Home
-      </s-link>
-      <s-link slot="primary-action" href={`/app/upsells/${slug}/new`}>
-        Create offer
-      </s-link>
+    <div ref={containerRef}>
+      <s-page heading={`${label} Upsell`}>
+        <s-link slot="breadcrumb-actions" href="/app">
+          Home
+        </s-link>
+        <s-link slot="primary-action" href={`/app/upsells/${slug}/new`}>
+          Create offer
+        </s-link>
 
-      {offers.length === 0 ? (
-        <s-section heading="No offers yet">
-          <s-paragraph>
-            Create your first {label.toLowerCase()} upsell offer to get
-            started.
-          </s-paragraph>
-        </s-section>
-      ) : (
-        <s-table>
-          <s-table-header-row>
-            <s-table-header>Name</s-table-header>
-            <s-table-header>Status</s-table-header>
-            <s-table-header>Discount</s-table-header>
-            <s-table-header>Products</s-table-header>
-            <s-table-header>Actions</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {offers.map((offer: any) => (
-              <s-table-row key={offer.id}>
-                <s-table-cell>
-                  <s-link href={`/app/upsells/${slug}/${offer.id}`}>
-                    {offer.upsellName}
-                  </s-link>
-                </s-table-cell>
-                <s-table-cell>
-                  <s-badge tone={offer.isActive ? "success" : undefined}>
-                    {offer.isActive ? "Active" : "Inactive"}
-                  </s-badge>
-                </s-table-cell>
-                <s-table-cell>{offer.discountPercentage}%</s-table-cell>
-                <s-table-cell>
-                  {offer.products.length} product
-                  {offer.products.length !== 1 ? "s" : ""}
-                </s-table-cell>
-                <s-table-cell>
-                  <s-stack direction="inline" gap="small-100">
-                    <s-button
-                      variant="tertiary"
-                      onClick={() => handleToggle(offer.id)}
-                    >
-                      {offer.isActive ? "Deactivate" : "Activate"}
-                    </s-button>
-                    <s-button
-                      variant="tertiary"
-                      tone="critical"
-                      onClick={() => handleDelete(offer.id)}
-                    >
-                      Delete
-                    </s-button>
-                  </s-stack>
-                </s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-      )}
-    </s-page>
+        {offers.length === 0 ? (
+          <s-section heading="No offers yet">
+            <s-paragraph>
+              Create your first {label.toLowerCase()} upsell offer to get
+              started.
+            </s-paragraph>
+          </s-section>
+        ) : (
+          <s-table>
+            <s-table-header-row>
+              <s-table-header>Name</s-table-header>
+              <s-table-header>Status</s-table-header>
+              <s-table-header>Discount</s-table-header>
+              <s-table-header>Products</s-table-header>
+              <s-table-header>Actions</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {offers.map((offer: any) => (
+                <s-table-row key={offer.id}>
+                  <s-table-cell>
+                    <s-link href={`/app/upsells/${slug}/${offer.id}`}>
+                      {offer.upsellName}
+                    </s-link>
+                  </s-table-cell>
+                  <s-table-cell>
+                    <s-badge tone={offer.isActive ? "success" : undefined}>
+                      {offer.isActive ? "Active" : "Inactive"}
+                    </s-badge>
+                  </s-table-cell>
+                  <s-table-cell>{offer.discountPercentage}%</s-table-cell>
+                  <s-table-cell>
+                    {offer.products.length} product
+                    {offer.products.length !== 1 ? "s" : ""}
+                  </s-table-cell>
+                  <s-table-cell>
+                    <s-stack direction="inline" gap="small-100">
+                      <s-button
+                        variant="tertiary"
+                        data-offer-action="toggle"
+                        data-offer-id={offer.id}
+                      >
+                        {offer.isActive ? "Deactivate" : "Activate"}
+                      </s-button>
+                      <s-button
+                        variant="tertiary"
+                        tone="critical"
+                        data-offer-action="delete"
+                        data-offer-id={offer.id}
+                      >
+                        Delete
+                      </s-button>
+                    </s-stack>
+                  </s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
+        )}
+      </s-page>
+    </div>
   );
 }

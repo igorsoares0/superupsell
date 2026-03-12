@@ -73,6 +73,24 @@ const NUMBER_FIELDS = new Set([
   "cornerRadius",
 ]);
 
+/** Attach a native click listener to a ref, avoiding React synthetic events
+ *  which don't work on Polaris web components in React 18. */
+function useNativeClick(
+  ref: React.RefObject<any>,
+  handler: () => void,
+) {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
+  useEffect(() => {
+    const el = ref.current as HTMLElement | null;
+    if (!el) return;
+    const listener = () => handlerRef.current();
+    el.addEventListener("click", listener);
+    return () => el.removeEventListener("click", listener);
+  }, [ref]);
+}
+
 export function OfferForm({
   offer,
   surfaceLabel: surfLabel,
@@ -83,6 +101,9 @@ export function OfferForm({
   const navigation = useNavigation();
   const shopify = useAppBridge();
   const formRef = useRef<HTMLDivElement>(null);
+  const saveRef = useRef<any>(null);
+  const pickProductsRef = useRef<any>(null);
+  const pickTargetsRef = useRef<any>(null);
 
   const isEditing = Boolean(offer?.id);
   const isSaving = navigation.state === "submitting";
@@ -230,6 +251,11 @@ export function OfferForm({
     submit(data, { method: "POST" });
   }, [form, selectedProducts, selectedTargets, isEditing, submit]);
 
+  // ─── Native click handlers (React 18 onClick doesn't work on s-button) ───
+  useNativeClick(saveRef, handleSave);
+  useNativeClick(pickProductsRef, pickProducts);
+  useNativeClick(pickTargetsRef, pickTargets);
+
   // ─── Render ───
   return (
     <div ref={formRef}>
@@ -241,9 +267,9 @@ export function OfferForm({
           {surfLabel} Offers
         </s-link>
         <s-button
+          ref={saveRef}
           slot="primary-action"
           variant="primary"
-          onClick={handleSave}
           {...(isSaving ? { loading: true } : {})}
         >
           Save
@@ -327,7 +353,7 @@ export function OfferForm({
                 {(form.targetMode === "collections" ||
                   form.targetMode === "specific_products") && (
                   <>
-                    <s-button onClick={pickTargets}>
+                    <s-button ref={pickTargetsRef}>
                       Select{" "}
                       {form.targetMode === "collections"
                         ? "collections"
@@ -355,7 +381,7 @@ export function OfferForm({
             <s-box padding="large-300" borderWidth="base" borderRadius="base">
               <s-stack direction="block" gap="base">
                 <s-heading>Upsell Products</s-heading>
-                <s-button onClick={pickProducts}>
+                <s-button ref={pickProductsRef}>
                   Select upsell products ({selectedProducts.length} selected)
                 </s-button>
                 {selectedProducts.length > 0 && (

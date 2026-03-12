@@ -29,11 +29,11 @@ type Props = {
 };
 
 const PLACEHOLDER_PRODUCTS: UpsellProduct[] = [
-  { productId: "p1", title: "Classic Sneakers" },
+  { productId: "p1", title: "White cap" },
   { productId: "p2", title: "Running Shoes" },
 ];
 
-const MOCK_PRICE = 49.99;
+const MOCK_PRICE = 30.0;
 
 function getContrastColor(hex: string): string {
   try {
@@ -49,104 +49,9 @@ function getContrastColor(hex: string): string {
 
 export function UpsellPreview({ form, products }: Props) {
   const items = products.length > 0 ? products : PLACEHOLDER_PRODUCTS;
-  const discountedPrice =
-    MOCK_PRICE * (1 - form.discountPercentage / 100);
+  const discountedPrice = MOCK_PRICE * (1 - form.discountPercentage / 100);
   const buttonTextColor = getContrastColor(form.buttonColor || "#000000");
-
-  const container: CSSProperties = {
-    backgroundColor: form.backgroundColor,
-    border: `1px solid ${form.borderColor}`,
-    borderRadius: `${form.cornerRadius}px`,
-    padding: "20px",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  };
-
-  const title: CSSProperties = {
-    fontSize: `${form.titleSize}px`,
-    fontWeight: 600,
-    marginBottom: "16px",
-    color: "#1a1a1a",
-  };
-
-  const productList: CSSProperties = {
-    display: form.layout === "slider" ? "flex" : "flex",
-    flexDirection: form.layout === "slider" ? "row" : "column",
-    gap: "12px",
-    overflowX: form.layout === "slider" ? "auto" : undefined,
-  };
-
-  const productCard: CSSProperties = {
-    flex: form.layout === "slider" ? "0 0 160px" : undefined,
-    border: `1px solid ${form.borderColor}`,
-    borderRadius: `${Math.max(form.cornerRadius - 2, 0)}px`,
-    padding: "12px",
-    backgroundColor: "#ffffff",
-  };
-
-  const imagePlaceholder: CSSProperties = {
-    width: "100%",
-    height: form.layout === "slider" ? "100px" : "120px",
-    backgroundColor: "#f0f0f0",
-    borderRadius: `${Math.max(form.cornerRadius - 4, 0)}px`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#999",
-    fontSize: "12px",
-    marginBottom: "8px",
-  };
-
-  const productName: CSSProperties = {
-    fontSize: `${form.textSize}px`,
-    fontWeight: 500,
-    color: "#333",
-    marginBottom: "4px",
-  };
-
-  const priceRow: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginBottom: "8px",
-    fontSize: `${Math.max(form.textSize - 2, 10)}px`,
-  };
-
-  const btn: CSSProperties = {
-    backgroundColor: form.buttonColor,
-    color: buttonTextColor,
-    border: "none",
-    borderRadius: `${Math.max(form.cornerRadius - 4, 2)}px`,
-    padding: "8px 16px",
-    fontSize: `${form.buttonSize}px`,
-    fontWeight: 500,
-    cursor: "pointer",
-    width: "100%",
-    textAlign: "center",
-  };
-
-  const variantRow: CSSProperties = {
-    display: "flex",
-    gap: "4px",
-    marginBottom: "8px",
-  };
-
-  const variantChip: CSSProperties = {
-    fontSize: "11px",
-    padding: "2px 8px",
-    border: "1px solid #ccc",
-    borderRadius: "12px",
-    color: "#666",
-  };
-
-  const discountBadge: CSSProperties = {
-    display: "inline-block",
-    backgroundColor: "#e53e3e",
-    color: "#fff",
-    fontSize: "11px",
-    fontWeight: 600,
-    padding: "2px 6px",
-    borderRadius: "4px",
-  };
+  const radius = form.cornerRadius;
 
   return (
     <div>
@@ -171,66 +76,214 @@ export function UpsellPreview({ form, products }: Props) {
           borderTop: "none",
         }}
       >
-        <div style={container}>
-          <div style={title}>{form.titleText || "You may also like"}</div>
+        {/* Container */}
+        <div
+          style={{
+            backgroundColor: form.backgroundColor,
+            border: `1px solid ${form.borderColor}`,
+            borderRadius: `${radius}px`,
+            padding: "16px",
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          {/* Title */}
+          <div
+            style={{
+              fontSize: `${form.titleSize}px`,
+              fontWeight: 600,
+              color: "#1a1a1a",
+              marginBottom: "12px",
+            }}
+          >
+            {form.titleText || "You may also like"}
+          </div>
 
+          {/* Discount badge */}
           {form.discountLabel && form.discountPercentage > 0 && (
             <div style={{ marginBottom: "12px" }}>
-              <span style={discountBadge}>
+              <span
+                style={{
+                  display: "inline-block",
+                  backgroundColor: "#e53e3e",
+                  color: "#fff",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                }}
+              >
                 {form.discountLabel} — {form.discountPercentage}% off
               </span>
             </div>
           )}
 
-          <div style={productList}>
+          {/* Product list */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: form.layout === "slider" ? "row" : "column",
+              gap: "10px",
+              overflowX: form.layout === "slider" ? "auto" : undefined,
+            }}
+          >
             {items.map((p) => (
-              <div key={p.productId} style={productCard}>
-                {form.showImage && (
-                  <div style={imagePlaceholder}>
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#ccc"
-                      strokeWidth="1.5"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <path d="M21 15l-5-5L5 21" />
-                    </svg>
-                  </div>
-                )}
-                <div style={productName}>
-                  {p.title || "Product"}
-                </div>
-                {form.showVariants && (
-                  <div style={variantRow}>
-                    <span style={variantChip}>S</span>
-                    <span style={variantChip}>M</span>
-                    <span style={variantChip}>L</span>
-                  </div>
-                )}
-                <div style={priceRow}>
-                  <span
-                    style={{
-                      textDecoration: "line-through",
-                      color: "#999",
-                    }}
-                  >
-                    ${MOCK_PRICE.toFixed(2)}
-                  </span>
-                  <span style={{ fontWeight: 600, color: "#1a1a1a" }}>
-                    ${discountedPrice.toFixed(2)}
-                  </span>
-                </div>
-                <div style={btn}>
-                  {form.buttonText || "Add to cart"}
-                </div>
-              </div>
+              <ProductCard
+                key={p.productId}
+                product={p}
+                form={form}
+                radius={radius}
+                mockPrice={MOCK_PRICE}
+                discountedPrice={discountedPrice}
+                buttonTextColor={buttonTextColor}
+              />
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductCard({
+  product,
+  form,
+  radius,
+  mockPrice,
+  discountedPrice,
+  buttonTextColor,
+}: {
+  product: UpsellProduct;
+  form: FormState;
+  radius: number;
+  mockPrice: number;
+  discountedPrice: number;
+  buttonTextColor: string;
+}) {
+  const cardRadius = Math.max(radius - 2, 0);
+
+  const card: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    border: `1px solid ${form.borderColor}`,
+    borderRadius: `${cardRadius}px`,
+    padding: "10px 12px",
+    backgroundColor: "#ffffff",
+    flex: form.layout === "slider" ? "0 0 300px" : undefined,
+  };
+
+  const imgBox: CSSProperties = {
+    width: "64px",
+    height: "64px",
+    minWidth: "64px",
+    backgroundColor: "#f5f5f5",
+    borderRadius: `${Math.max(cardRadius - 2, 0)}px`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  };
+
+  const btn: CSSProperties = {
+    backgroundColor: form.buttonColor,
+    color: buttonTextColor,
+    border: "none",
+    borderRadius: `${Math.max(cardRadius - 2, 2)}px`,
+    padding: "8px 14px",
+    fontSize: `${form.buttonSize}px`,
+    fontWeight: 500,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  };
+
+  return (
+    <div style={card}>
+      {/* Left: image */}
+      {form.showImage && (
+        <div style={imgBox}>
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ccc"
+            strokeWidth="1.5"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+        </div>
+      )}
+
+      {/* Center: name, price, variant */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: `${form.textSize}px`,
+            fontWeight: 500,
+            color: "#1a1a1a",
+            marginBottom: "2px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {product.title || "Product"}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: `${Math.max(form.textSize - 1, 10)}px`,
+            marginBottom: form.showVariants ? "6px" : 0,
+          }}
+        >
+          <span style={{ fontWeight: 600, color: "#1a1a1a" }}>
+            ${discountedPrice.toFixed(2)}
+          </span>
+          <span
+            style={{
+              textDecoration: "line-through",
+              color: "#999",
+              fontSize: `${Math.max(form.textSize - 2, 10)}px`,
+            }}
+          >
+            ${mockPrice.toFixed(2)}
+          </span>
+        </div>
+
+        {/* Variant selector */}
+        {form.showVariants && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              padding: "3px 8px",
+              fontSize: "12px",
+              color: "#666",
+              gap: "4px",
+            }}
+          >
+            <span style={{ color: "#999" }}>▾</span>
+          </div>
+        )}
+      </div>
+
+      {/* Right: add button */}
+      <div style={btn}>
+        <span style={{ fontSize: `${form.buttonSize + 2}px`, lineHeight: 1 }}>
+          +
+        </span>
+        {form.buttonText || "Add"}
       </div>
     </div>
   );

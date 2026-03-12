@@ -133,6 +133,8 @@ export function OfferForm({
   const isActiveRef = useRef<any>(null);
   const showVariantsRef = useRef<any>(null);
   const showImageRef = useRef<any>(null);
+  const targetModeRef = useRef<any>(null);
+  const layoutRef = useRef<any>(null);
 
   const isEditing = Boolean(offer?.id);
   const isSaving = navigation.state === "submitting";
@@ -283,10 +285,43 @@ export function OfferForm({
   // ─── Native click handlers (React 18 onClick doesn't work on s-button) ───
   useNativeClick(saveRef, handleSave);
   useNativeClick(pickProductsRef, pickProducts);
-  useNativeClick(pickTargetsRef, pickTargets);
+
+  // pickTargets button is conditionally rendered, so useNativeClick (which only
+  // binds on mount) misses it. Re-bind whenever targetMode changes.
+  const pickTargetsHandlerRef = useRef(pickTargets);
+  pickTargetsHandlerRef.current = pickTargets;
+  useEffect(() => {
+    const el = pickTargetsRef.current as HTMLElement | null;
+    if (!el) return;
+    const listener = () => pickTargetsHandlerRef.current();
+    el.addEventListener("click", listener);
+    return () => el.removeEventListener("click", listener);
+  }, [form.targetMode]);
   useSwitchToggle(isActiveRef, (v) => setForm((prev) => ({ ...prev, isActive: v })));
   useSwitchToggle(showVariantsRef, (v) => setForm((prev) => ({ ...prev, showVariants: v })));
   useSwitchToggle(showImageRef, (v) => setForm((prev) => ({ ...prev, showImage: v })));
+
+  // Direct listeners for <s-select> (change event has composed:false in Shadow DOM)
+  useEffect(() => {
+    const tmEl = targetModeRef.current;
+    const lyEl = layoutRef.current;
+    const onTargetMode = () => {
+      requestAnimationFrame(() => {
+        if (tmEl) setForm((prev) => ({ ...prev, targetMode: tmEl.value }));
+      });
+    };
+    const onLayout = () => {
+      requestAnimationFrame(() => {
+        if (lyEl) setForm((prev) => ({ ...prev, layout: lyEl.value }));
+      });
+    };
+    tmEl?.addEventListener("change", onTargetMode);
+    lyEl?.addEventListener("change", onLayout);
+    return () => {
+      tmEl?.removeEventListener("change", onTargetMode);
+      lyEl?.removeEventListener("change", onLayout);
+    };
+  }, []);
 
   // ─── Render ───
   return (
@@ -369,6 +404,7 @@ export function OfferForm({
               <s-stack direction="block" gap="base">
                 <s-heading>Target Products</s-heading>
                 <s-select
+                  ref={targetModeRef}
                   label="Apply to"
                   data-field="targetMode"
                   value={form.targetMode}
@@ -438,6 +474,7 @@ export function OfferForm({
               <s-stack direction="block" gap="base">
                 <s-heading>Display Options</s-heading>
                 <s-select
+                  ref={layoutRef}
                   label="Layout"
                   data-field="layout"
                   value={form.layout}

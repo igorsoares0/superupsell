@@ -33,7 +33,11 @@
           {% assign first_variant = prod.selected_or_first_available_variant %}
           {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
 
-          <div class="superupsell-card" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;">
+          <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+
+            {% if offer.cardMode == 'checkbox' %}
+              <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" checked style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
+            {% endif %}
 
             {% if offer.showImage and prod.featured_image %}
               <img
@@ -67,14 +71,23 @@
               {% endif %}
             </div>
 
-            <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
-              <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
-              {{ offer.buttonText | default: 'Add' }}
-            </button>
+            {% if offer.cardMode != 'checkbox' %}
+              <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
+                {{ offer.buttonText | default: 'Add' }}
+              </button>
+            {% endif %}
           </div>
         {% endif %}
       {% endfor %}
     </div>
+
+    {% if offer.cardMode == 'checkbox' %}
+      {% assign bulk_radius = radius | minus: 4 | at_least: 4 %}
+      <button class="superupsell-bulk-add" style="width:100%;margin-top:12px;background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ bulk_radius }}px;padding:10px 20px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:600;cursor:pointer;">
+        {{ offer.buttonText | default: 'Add to cart' }}
+      </button>
+    {% endif %}
   </div>
 
   <script src="{{ 'superupsell.js' | asset_url }}" defer></script>

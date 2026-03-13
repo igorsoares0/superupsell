@@ -21,6 +21,7 @@ export type SerializedOffer = {
   showVariants: boolean;
   showImage: boolean;
   layout: string;
+  cardMode: string;
   titleText: string;
   buttonText: string;
   buttonColor: string;
@@ -60,6 +61,7 @@ const DEFAULTS = {
   showVariants: false,
   showImage: true,
   layout: "vertical",
+  cardMode: "button",
   titleText: "You may also like",
   buttonText: "Add to cart",
   buttonColor: "#000000",
@@ -144,6 +146,7 @@ export function OfferForm({
   const showImageRef = useRef<any>(null);
   const targetModeRef = useRef<any>(null);
   const layoutRef = useRef<any>(null);
+  const cardModeRef = useRef<any>(null);
 
   const isEditing = Boolean(offer?.id);
   const isSaving = navigation.state === "submitting";
@@ -158,6 +161,7 @@ export function OfferForm({
     showVariants: offer?.showVariants ?? DEFAULTS.showVariants,
     showImage: offer?.showImage ?? DEFAULTS.showImage,
     layout: offer?.layout ?? DEFAULTS.layout,
+    cardMode: offer?.cardMode ?? DEFAULTS.cardMode,
     titleText: offer?.titleText ?? DEFAULTS.titleText,
     buttonText: offer?.buttonText ?? DEFAULTS.buttonText,
     buttonColor: offer?.buttonColor ?? DEFAULTS.buttonColor,
@@ -286,6 +290,7 @@ export function OfferForm({
     data.set("discountLabel", form.discountLabel);
     data.set("targetMode", form.targetMode);
     data.set("layout", form.layout);
+    data.set("cardMode", form.cardMode);
     data.set("titleText", form.titleText);
     data.set("buttonText", form.buttonText);
     data.set("buttonColor", form.buttonColor);
@@ -333,6 +338,7 @@ export function OfferForm({
   useEffect(() => {
     const tmEl = targetModeRef.current;
     const lyEl = layoutRef.current;
+    const cmEl = cardModeRef.current;
     const onTargetMode = () => {
       requestAnimationFrame(() => {
         if (tmEl) setForm((prev) => ({ ...prev, targetMode: tmEl.value }));
@@ -343,11 +349,18 @@ export function OfferForm({
         if (lyEl) setForm((prev) => ({ ...prev, layout: lyEl.value }));
       });
     };
+    const onCardMode = () => {
+      requestAnimationFrame(() => {
+        if (cmEl) setForm((prev) => ({ ...prev, cardMode: cmEl.value }));
+      });
+    };
     tmEl?.addEventListener("change", onTargetMode);
     lyEl?.addEventListener("change", onLayout);
+    cmEl?.addEventListener("change", onCardMode);
     return () => {
       tmEl?.removeEventListener("change", onTargetMode);
       lyEl?.removeEventListener("change", onLayout);
+      cmEl?.removeEventListener("change", onCardMode);
     };
   }, []);
 
@@ -523,6 +536,15 @@ export function OfferForm({
                 >
                   <s-option value="vertical">Vertical</s-option>
                   <s-option value="slider">Slider</s-option>
+                </s-select>
+                <s-select
+                  ref={cardModeRef}
+                  label="Card action"
+                  data-field="cardMode"
+                  value={form.cardMode}
+                >
+                  <s-option value="button">Button per product</s-option>
+                  <s-option value="checkbox">Checkbox + single button</s-option>
                 </s-select>
 
                 <s-switch

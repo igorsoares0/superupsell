@@ -48,6 +48,11 @@ enum Layout {
   slider
 }
 
+enum CardMode {
+  button
+  checkbox
+}
+
 enum EventType {
   impression
   click
@@ -76,6 +81,7 @@ model UpsellOffer {
   showVariants       Boolean  @default(false)
   showImage          Boolean  @default(true)
   layout             Layout   @default(vertical)
+  cardMode           CardMode @default(button)
   titleText          String   @default("You may also like")
   buttonText         String   @default("Add to cart")
   buttonColor        String   @default("#000000")

@@ -127,6 +127,86 @@
     }
   }
 
+  // ─── Bulk add (checkbox mode) ───
+
+  async function handleBulkAdd(e) {
+    var btn = e.currentTarget;
+    var widget = btn.closest("[data-offer-id]");
+    var checkboxes = widget
+      ? widget.querySelectorAll(".superupsell-checkbox:checked")
+      : [];
+    if (checkboxes.length === 0) return;
+
+    var items = [];
+    checkboxes.forEach(function (cb) {
+      var vid = cb.dataset.variantId;
+      if (vid) items.push({ id: parseInt(vid, 10), quantity: 1 });
+    });
+    if (items.length === 0) return;
+
+    var originalText = btn.textContent;
+    btn.textContent = "Adding\u2026";
+    btn.disabled = true;
+
+    trackEvent("click", widget);
+
+    try {
+      var res = await fetch("/cart/add.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items }),
+      });
+
+      if (res.ok) {
+        trackEvent("conversion", widget);
+        btn.textContent = "\u2713 Added";
+        setTimeout(function () {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 1500);
+
+        try {
+          var cartRes = await fetch("/?sections=cart-drawer,cart-icon-bubble");
+          if (cartRes.ok) {
+            var sections = await cartRes.json();
+            for (var id in sections) {
+              var el = document.getElementById("shopify-section-" + id);
+              if (el) el.innerHTML = sections[id];
+            }
+          }
+        } catch (_) {}
+      } else {
+        btn.textContent = "Error";
+        setTimeout(function () {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 1500);
+      }
+    } catch (_) {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  // ─── Checkbox card click (toggle checkbox when clicking anywhere on card) ───
+
+  function bindCheckboxCards(container) {
+    container.querySelectorAll(".superupsell-card").forEach(function (card) {
+      var cb = card.querySelector(".superupsell-checkbox");
+      if (!cb) return;
+
+      card.addEventListener("click", function (e) {
+        // Don't toggle if clicking checkbox itself or variant select
+        if (e.target === cb || e.target.closest(".superupsell-variant-select")) return;
+        cb.checked = !cb.checked;
+      });
+    });
+
+    container.querySelectorAll(".superupsell-bulk-add").forEach(function (btn) {
+      btn.addEventListener("click", handleBulkAdd);
+    });
+  }
+
   // ─── Bind buttons ───
 
   function bindButtons(container) {
@@ -144,8 +224,13 @@
           if (!card) return;
           var btn = card.querySelector(".superupsell-add-btn");
           if (btn) btn.dataset.variantId = this.value;
+          // Also update checkbox variant id
+          var cb = card.querySelector(".superupsell-checkbox");
+          if (cb) cb.dataset.variantId = this.value;
         });
       });
+
+    bindCheckboxCards(container);
   }
 
   // ─── Popup ───

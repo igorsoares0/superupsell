@@ -25,6 +25,7 @@ type FormState = {
   showVariants: boolean;
   showImage: boolean;
   layout: string;
+  cardMode: string;
 };
 
 type Props = {
@@ -42,6 +43,34 @@ export function UpsellPreview({ form, products }: Props) {
   const buttonTextColor = form.buttonTextColor || "#FFFFFF";
   const textColor = form.textColor || "#1A1A1A";
   const radius = form.cornerRadius;
+  const isCheckbox = form.cardMode === "checkbox";
+
+  const [checked, setChecked] = useState<Set<string>>(
+    () => new Set(items.map((p) => p.productId)),
+  );
+
+  const toggleCheck = (id: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const btnStyle: CSSProperties = {
+    backgroundColor: form.buttonColor,
+    color: buttonTextColor,
+    border: "none",
+    borderRadius: `${Math.max(radius - 4, 4)}px`,
+    padding: "10px 20px",
+    fontSize: `${form.buttonSize}px`,
+    fontWeight: 600,
+    cursor: "pointer",
+    width: "100%",
+    textAlign: "center",
+    marginTop: "12px",
+  };
 
   return (
     <div>
@@ -116,6 +145,9 @@ export function UpsellPreview({ form, products }: Props) {
               radius={radius}
               buttonTextColor={buttonTextColor}
               textColor={textColor}
+              isCheckbox={isCheckbox}
+              checked={checked}
+              onToggle={toggleCheck}
             />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -127,8 +159,18 @@ export function UpsellPreview({ form, products }: Props) {
                   radius={radius}
                   buttonTextColor={buttonTextColor}
                   textColor={textColor}
+                  isCheckbox={isCheckbox}
+                  isChecked={checked.has(p.productId)}
+                  onToggle={() => toggleCheck(p.productId)}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Single button for checkbox mode */}
+          {isCheckbox && (
+            <div style={btnStyle}>
+              {form.buttonText || "Add to cart"} ({checked.size})
             </div>
           )}
         </div>
@@ -143,12 +185,18 @@ function SliderContainer({
   radius,
   buttonTextColor,
   textColor,
+  isCheckbox,
+  checked,
+  onToggle,
 }: {
   items: UpsellProduct[];
   form: FormState;
   radius: number;
   buttonTextColor: string;
   textColor: string;
+  isCheckbox: boolean;
+  checked: Set<string>;
+  onToggle: (id: string) => void;
 }) {
   const [index, setIndex] = useState(0);
   const hasPrev = index > 0;
@@ -166,6 +214,9 @@ function SliderContainer({
         radius={radius}
         buttonTextColor={buttonTextColor}
         textColor={textColor}
+        isCheckbox={isCheckbox}
+        isChecked={checked.has(items[index].productId)}
+        onToggle={() => onToggle(items[index].productId)}
       />
       {hasNext && (
         <ArrowButton direction="right" onClick={() => setIndex(index + 1)} />
@@ -224,12 +275,18 @@ function ProductCard({
   radius,
   buttonTextColor,
   textColor,
+  isCheckbox,
+  isChecked,
+  onToggle,
 }: {
   product: UpsellProduct;
   form: FormState;
   radius: number;
   buttonTextColor: string;
   textColor: string;
+  isCheckbox: boolean;
+  isChecked: boolean;
+  onToggle: () => void;
 }) {
   const cardRadius = Math.max(radius - 2, 0);
   const imgRadius = Math.max(cardRadius - 2, 0);
@@ -240,10 +297,11 @@ function ProductCard({
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    border: `1px solid ${form.borderColor}`,
+    border: `1px solid ${isCheckbox && isChecked ? form.buttonColor : form.borderColor}`,
     borderRadius: `${cardRadius}px`,
     padding: "10px 12px",
     backgroundColor: "#ffffff",
+    cursor: isCheckbox ? "pointer" : undefined,
   };
 
   const btn: CSSProperties = {
@@ -263,8 +321,31 @@ function ProductCard({
   };
 
   return (
-    <div style={card}>
-      {/* Left: image */}
+    <div style={card} onClick={isCheckbox ? onToggle : undefined}>
+      {/* Checkbox */}
+      {isCheckbox && (
+        <div
+          style={{
+            width: "18px",
+            height: "18px",
+            minWidth: "18px",
+            borderRadius: "4px",
+            border: `2px solid ${isChecked ? form.buttonColor : "#ccc"}`,
+            backgroundColor: isChecked ? form.buttonColor : "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {isChecked && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6l2.5 2.5 4.5-5" stroke={buttonTextColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      )}
+
+      {/* Image */}
       {form.showImage && (
         product.imageUrl ? (
           <img
@@ -367,11 +448,13 @@ function ProductCard({
         )}
       </div>
 
-      {/* Right: add button */}
-      <div style={btn}>
-        <span style={{ lineHeight: 1 }}>+</span>
-        {form.buttonText || "Add"}
-      </div>
+      {/* Right: add button (only in button mode) */}
+      {!isCheckbox && (
+        <div style={btn}>
+          <span style={{ lineHeight: 1 }}>+</span>
+          {form.buttonText || "Add"}
+        </div>
+      )}
     </div>
   );
 }

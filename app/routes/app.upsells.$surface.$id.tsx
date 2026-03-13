@@ -27,14 +27,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     ...offer.targets.map((t: any) => t.targetId),
   ];
 
-  const nodeMap = new Map<string, { title: string; imageUrl?: string }>();
+  const nodeMap = new Map<string, { title: string; imageUrl?: string; price?: number }>();
   if (allIds.length > 0) {
     try {
       const res = await admin.graphql(
         `query GetNodes($ids: [ID!]!) {
           nodes(ids: $ids) {
             id
-            ... on Product { title, featuredImage { url } }
+            ... on Product {
+              title
+              featuredImage { url }
+              priceRangeV2 { minVariantPrice { amount } }
+            }
             ... on Collection { title, image { url } }
           }
         }`,
@@ -46,6 +50,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
           nodeMap.set(node.id, {
             title: node.title ?? node.id,
             imageUrl: node.featuredImage?.url ?? node.image?.url,
+            price: node.priceRangeV2?.minVariantPrice?.amount
+              ? Number(node.priceRangeV2.minVariantPrice.amount)
+              : undefined,
           });
         }
       }
@@ -60,6 +67,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       ...p,
       title: nodeMap.get(p.productId)?.title,
       imageUrl: nodeMap.get(p.productId)?.imageUrl,
+      price: nodeMap.get(p.productId)?.price,
     })),
     targets: offer.targets.map((t: any) => ({
       ...t,

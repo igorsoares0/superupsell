@@ -3,6 +3,8 @@ import { useState, type CSSProperties } from "react";
 type UpsellProduct = {
   productId: string;
   title?: string;
+  imageUrl?: string;
+  price?: number;
   variantIds?: string[];
 };
 
@@ -31,15 +33,12 @@ type Props = {
 };
 
 const PLACEHOLDER_PRODUCTS: UpsellProduct[] = [
-  { productId: "p1", title: "White cap" },
-  { productId: "p2", title: "Running Shoes" },
+  { productId: "p1", title: "White cap", price: 29.99 },
+  { productId: "p2", title: "Running Shoes", price: 59.99 },
 ];
-
-const MOCK_PRICE = 30.0;
 
 export function UpsellPreview({ form, products }: Props) {
   const items = products.length > 0 ? products : PLACEHOLDER_PRODUCTS;
-  const discountedPrice = MOCK_PRICE * (1 - form.discountPercentage / 100);
   const buttonTextColor = form.buttonTextColor || "#FFFFFF";
   const textColor = form.textColor || "#1A1A1A";
   const radius = form.cornerRadius;
@@ -115,8 +114,6 @@ export function UpsellPreview({ form, products }: Props) {
               items={items}
               form={form}
               radius={radius}
-              mockPrice={MOCK_PRICE}
-              discountedPrice={discountedPrice}
               buttonTextColor={buttonTextColor}
               textColor={textColor}
             />
@@ -128,8 +125,6 @@ export function UpsellPreview({ form, products }: Props) {
                   product={p}
                   form={form}
                   radius={radius}
-                  mockPrice={MOCK_PRICE}
-                  discountedPrice={discountedPrice}
                   buttonTextColor={buttonTextColor}
                   textColor={textColor}
                 />
@@ -146,16 +141,12 @@ function SliderContainer({
   items,
   form,
   radius,
-  mockPrice,
-  discountedPrice,
   buttonTextColor,
   textColor,
 }: {
   items: UpsellProduct[];
   form: FormState;
   radius: number;
-  mockPrice: number;
-  discountedPrice: number;
   buttonTextColor: string;
   textColor: string;
 }) {
@@ -173,8 +164,6 @@ function SliderContainer({
         product={items[index]}
         form={form}
         radius={radius}
-        mockPrice={mockPrice}
-        discountedPrice={discountedPrice}
         buttonTextColor={buttonTextColor}
         textColor={textColor}
       />
@@ -233,20 +222,19 @@ function ProductCard({
   product,
   form,
   radius,
-  mockPrice,
-  discountedPrice,
   buttonTextColor,
   textColor,
 }: {
   product: UpsellProduct;
   form: FormState;
   radius: number;
-  mockPrice: number;
-  discountedPrice: number;
   buttonTextColor: string;
   textColor: string;
 }) {
   const cardRadius = Math.max(radius - 2, 0);
+  const imgRadius = Math.max(cardRadius - 2, 0);
+  const originalPrice = product.price ?? 30.0;
+  const discountedPrice = originalPrice * (1 - form.discountPercentage / 100);
 
   const card: CSSProperties = {
     display: "flex",
@@ -256,18 +244,6 @@ function ProductCard({
     borderRadius: `${cardRadius}px`,
     padding: "10px 12px",
     backgroundColor: "#ffffff",
-  };
-
-  const imgBox: CSSProperties = {
-    width: "64px",
-    height: "64px",
-    minWidth: "64px",
-    backgroundColor: "#f5f5f5",
-    borderRadius: `${Math.max(cardRadius - 2, 0)}px`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
   };
 
   const btn: CSSProperties = {
@@ -290,20 +266,45 @@ function ProductCard({
     <div style={card}>
       {/* Left: image */}
       {form.showImage && (
-        <div style={imgBox}>
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ccc"
-            strokeWidth="1.5"
+        product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.title || "Product"}
+            style={{
+              width: 64,
+              height: 64,
+              minWidth: 64,
+              objectFit: "cover",
+              borderRadius: `${imgRadius}px`,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              minWidth: "64px",
+              backgroundColor: "#f5f5f5",
+              borderRadius: `${imgRadius}px`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
-        </div>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ccc"
+              strokeWidth="1.5"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </div>
+        )
       )}
 
       {/* Center: name, price, variant */}
@@ -334,15 +335,17 @@ function ProductCard({
           <span style={{ fontWeight: 600, color: textColor }}>
             ${discountedPrice.toFixed(2)}
           </span>
-          <span
-            style={{
-              textDecoration: "line-through",
-              color: "#999",
-              fontSize: `${Math.max(form.textSize - 2, 10)}px`,
-            }}
-          >
-            ${mockPrice.toFixed(2)}
-          </span>
+          {form.discountPercentage > 0 && (
+            <span
+              style={{
+                textDecoration: "line-through",
+                color: "#999",
+                fontSize: `${Math.max(form.textSize - 2, 10)}px`,
+              }}
+            >
+              ${originalPrice.toFixed(2)}
+            </span>
+          )}
         </div>
 
         {/* Variant selector */}

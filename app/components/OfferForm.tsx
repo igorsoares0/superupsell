@@ -8,6 +8,7 @@ type UpsellProduct = {
   productId: string;
   title?: string;
   imageUrl?: string;
+  price?: number;
   variantIds?: string[];
 };
 
@@ -40,6 +41,7 @@ export type SerializedOffer = {
     position: number;
     title?: string;
     imageUrl?: string;
+    price?: number;
   }>;
 };
 
@@ -176,6 +178,7 @@ export function OfferForm({
         productId: p.productId,
         title: p.title,
         imageUrl: p.imageUrl,
+        price: p.price,
         variantIds: p.variantIds ?? undefined,
       })) ?? [],
   );
@@ -242,6 +245,7 @@ export function OfferForm({
             productId: p.id,
             title: p.title,
             imageUrl: p.images?.[0]?.originalSrc || p.featuredImage?.url,
+            price: p.variants?.[0]?.price ? Number(p.variants[0].price) : undefined,
             variantIds: p.variants?.map((v: any) => v.id),
           }));
         return [...prev, ...newItems];

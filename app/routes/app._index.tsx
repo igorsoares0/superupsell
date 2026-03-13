@@ -25,12 +25,6 @@ const SURFACES = [
       "Present upsell offers in the cart page before checkout to increase average order value.",
     href: "/app/upsells/cart",
   },
-  {
-    title: "Checkout Upsell",
-    description:
-      "Offer last-chance upsells during the checkout process with automatic discount application.",
-    href: "/app/upsells/checkout",
-  },
 ] as const;
 
 export default function Home() {

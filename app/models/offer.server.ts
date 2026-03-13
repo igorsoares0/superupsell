@@ -8,21 +8,18 @@ const SURFACE_FROM_SLUG: Record<string, Surface> = {
   "product-page": "product_page",
   popup: "popup",
   cart: "cart",
-  checkout: "checkout",
 };
 
 const SLUG_FROM_SURFACE: Record<Surface, string> = {
   product_page: "product-page",
   popup: "popup",
   cart: "cart",
-  checkout: "checkout",
 };
 
 const SURFACE_LABELS: Record<Surface, string> = {
   product_page: "Product Page",
   popup: "Popup",
   cart: "Cart",
-  checkout: "Checkout",
 };
 
 export function parseSurfaceSlug(slug: string): Surface | null {

@@ -7,7 +7,6 @@ const VALID_SURFACES: Surface[] = [
   "product_page",
   "popup",
   "cart",
-  "checkout",
 ];
 
 /**

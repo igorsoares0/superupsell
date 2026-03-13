@@ -16,7 +16,6 @@ const SURFACE_OPTIONS = [
   { value: "product_page", label: "Product Page" },
   { value: "popup", label: "Popup" },
   { value: "cart", label: "Cart" },
-  { value: "checkout", label: "Checkout" },
 ];
 
 function getStartDate(period: string): Date {
@@ -102,7 +101,6 @@ const SURFACE_LABELS: Record<string, string> = {
   product_page: "Product Page",
   popup: "Popup",
   cart: "Cart",
-  checkout: "Checkout",
 };
 
 export default function Analytics() {

@@ -35,7 +35,6 @@ enum Surface {
   product_page
   popup
   cart
-  checkout
 }
 
 enum TargetMode {

@@ -43,7 +43,7 @@
         <div class="superupsell-popup-content" data-offer-id="{{ offer.id }}" data-surface="popup" style="background:{{ offer.backgroundColor | default: '#fff' }};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:#1a1a1a;">
+            <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">
               {{ offer.titleText | default: 'You may also like' }}
             </div>
             <button class="superupsell-popup-close" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;padding:0 4px;">×</button>
@@ -77,16 +77,16 @@
                   {% endif %}
 
                   <div style="flex:1;min-width:0;">
-                    <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:#1a1a1a;">{{ prod.title }}</div>
+                    <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ prod.title }}</div>
                     <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                      <span style="font-weight:600;color:#1a1a1a;">{{ discounted_price | money }}</span>
+                      <span style="font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ discounted_price | money }}</span>
                       {% if offer.discountPercentage > 0 %}
                         <span style="text-decoration:line-through;color:#999;">{{ original_price | money }}</span>
                       {% endif %}
                     </div>
                   </div>
 
-                  <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:#fff;border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                  <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
                     <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
                     {{ offer.buttonText | default: 'Add' }}
                   </button>

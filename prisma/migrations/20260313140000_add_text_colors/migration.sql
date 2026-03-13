@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "UpsellOffer" ADD COLUMN "buttonTextColor" TEXT NOT NULL DEFAULT '#FFFFFF';
+ALTER TABLE "UpsellOffer" ADD COLUMN "textColor" TEXT NOT NULL DEFAULT '#1A1A1A';

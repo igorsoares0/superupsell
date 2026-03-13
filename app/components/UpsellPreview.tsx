@@ -10,7 +10,9 @@ type FormState = {
   titleText: string;
   buttonText: string;
   buttonColor: string;
+  buttonTextColor: string;
   backgroundColor: string;
+  textColor: string;
   borderColor: string;
   titleSize: number;
   textSize: number;
@@ -35,22 +37,11 @@ const PLACEHOLDER_PRODUCTS: UpsellProduct[] = [
 
 const MOCK_PRICE = 30.0;
 
-function getContrastColor(hex: string): string {
-  try {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? "#000000" : "#FFFFFF";
-  } catch {
-    return "#FFFFFF";
-  }
-}
-
 export function UpsellPreview({ form, products }: Props) {
   const items = products.length > 0 ? products : PLACEHOLDER_PRODUCTS;
   const discountedPrice = MOCK_PRICE * (1 - form.discountPercentage / 100);
-  const buttonTextColor = getContrastColor(form.buttonColor || "#000000");
+  const buttonTextColor = form.buttonTextColor || "#FFFFFF";
+  const textColor = form.textColor || "#1A1A1A";
   const radius = form.cornerRadius;
 
   return (
@@ -92,7 +83,7 @@ export function UpsellPreview({ form, products }: Props) {
             style={{
               fontSize: `${form.titleSize}px`,
               fontWeight: 600,
-              color: "#1a1a1a",
+              color: textColor,
               marginBottom: "12px",
             }}
           >
@@ -127,6 +118,7 @@ export function UpsellPreview({ form, products }: Props) {
               mockPrice={MOCK_PRICE}
               discountedPrice={discountedPrice}
               buttonTextColor={buttonTextColor}
+              textColor={textColor}
             />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -139,6 +131,7 @@ export function UpsellPreview({ form, products }: Props) {
                   mockPrice={MOCK_PRICE}
                   discountedPrice={discountedPrice}
                   buttonTextColor={buttonTextColor}
+                  textColor={textColor}
                 />
               ))}
             </div>
@@ -156,6 +149,7 @@ function SliderContainer({
   mockPrice,
   discountedPrice,
   buttonTextColor,
+  textColor,
 }: {
   items: UpsellProduct[];
   form: FormState;
@@ -163,6 +157,7 @@ function SliderContainer({
   mockPrice: number;
   discountedPrice: number;
   buttonTextColor: string;
+  textColor: string;
 }) {
   const [index, setIndex] = useState(0);
   const hasPrev = index > 0;
@@ -181,6 +176,7 @@ function SliderContainer({
         mockPrice={mockPrice}
         discountedPrice={discountedPrice}
         buttonTextColor={buttonTextColor}
+        textColor={textColor}
       />
       {hasNext && (
         <ArrowButton direction="right" onClick={() => setIndex(index + 1)} />
@@ -240,6 +236,7 @@ function ProductCard({
   mockPrice,
   discountedPrice,
   buttonTextColor,
+  textColor,
 }: {
   product: UpsellProduct;
   form: FormState;
@@ -247,6 +244,7 @@ function ProductCard({
   mockPrice: number;
   discountedPrice: number;
   buttonTextColor: string;
+  textColor: string;
 }) {
   const cardRadius = Math.max(radius - 2, 0);
 
@@ -314,7 +312,7 @@ function ProductCard({
           style={{
             fontSize: `${form.textSize}px`,
             fontWeight: 500,
-            color: "#1a1a1a",
+            color: textColor,
             marginBottom: "2px",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -333,7 +331,7 @@ function ProductCard({
             marginBottom: form.showVariants ? "6px" : 0,
           }}
         >
-          <span style={{ fontWeight: 600, color: "#1a1a1a" }}>
+          <span style={{ fontWeight: 600, color: textColor }}>
             ${discountedPrice.toFixed(2)}
           </span>
           <span

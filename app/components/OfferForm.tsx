@@ -23,7 +23,9 @@ export type SerializedOffer = {
   titleText: string;
   buttonText: string;
   buttonColor: string;
+  buttonTextColor: string;
   backgroundColor: string;
+  textColor: string;
   borderColor: string;
   titleSize: number;
   textSize: number;
@@ -59,7 +61,9 @@ const DEFAULTS = {
   titleText: "You may also like",
   buttonText: "Add to cart",
   buttonColor: "#000000",
+  buttonTextColor: "#FFFFFF",
   backgroundColor: "#FFFFFF",
+  textColor: "#1A1A1A",
   borderColor: "#E0E0E0",
   titleSize: 18,
   textSize: 14,
@@ -155,7 +159,9 @@ export function OfferForm({
     titleText: offer?.titleText ?? DEFAULTS.titleText,
     buttonText: offer?.buttonText ?? DEFAULTS.buttonText,
     buttonColor: offer?.buttonColor ?? DEFAULTS.buttonColor,
+    buttonTextColor: offer?.buttonTextColor ?? DEFAULTS.buttonTextColor,
     backgroundColor: offer?.backgroundColor ?? DEFAULTS.backgroundColor,
+    textColor: offer?.textColor ?? DEFAULTS.textColor,
     borderColor: offer?.borderColor ?? DEFAULTS.borderColor,
     titleSize: offer?.titleSize ?? DEFAULTS.titleSize,
     textSize: offer?.textSize ?? DEFAULTS.textSize,
@@ -279,7 +285,9 @@ export function OfferForm({
     data.set("titleText", form.titleText);
     data.set("buttonText", form.buttonText);
     data.set("buttonColor", form.buttonColor);
+    data.set("buttonTextColor", form.buttonTextColor);
     data.set("backgroundColor", form.backgroundColor);
+    data.set("textColor", form.textColor);
     data.set("borderColor", form.borderColor);
 
     data.set("discountPercentage", String(form.discountPercentage));
@@ -544,19 +552,31 @@ export function OfferForm({
 
                 <s-stack direction="inline" gap="base">
                   <s-color-field
-                    label="Button color"
-                    data-field="buttonColor"
-                    value={form.buttonColor}
-                  />
-                  <s-color-field
                     label="Background"
                     data-field="backgroundColor"
                     value={form.backgroundColor}
                   />
                   <s-color-field
+                    label="Text color"
+                    data-field="textColor"
+                    value={form.textColor}
+                  />
+                  <s-color-field
                     label="Border"
                     data-field="borderColor"
                     value={form.borderColor}
+                  />
+                </s-stack>
+                <s-stack direction="inline" gap="base">
+                  <s-color-field
+                    label="Button color"
+                    data-field="buttonColor"
+                    value={form.buttonColor}
+                  />
+                  <s-color-field
+                    label="Button text"
+                    data-field="buttonTextColor"
+                    value={form.buttonTextColor}
                   />
                 </s-stack>
 

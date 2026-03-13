@@ -37,7 +37,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       plan: PLAN_NAME,
       isTest: true,
     });
-    // billing.request redirects to Shopify confirmation page — this line is not reached
   }
 
   if (intent === "cancel") {
@@ -55,6 +54,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return null;
 };
 
+const FEATURES = [
+  "Unlimited upsell offers",
+  "Product page, cart & popup surfaces",
+  "Automatic discounts",
+  "Analytics dashboard",
+  "Full visual customization",
+];
+
 export default function Billing() {
   const { hasActivePayment, subscription } =
     useLoaderData<typeof loader>();
@@ -65,7 +72,6 @@ export default function Billing() {
   const subscribeRef = useRef<any>(null);
   const cancelRef = useRef<any>(null);
 
-  // Native click handlers for Polaris web component buttons
   useEffect(() => {
     const subEl = subscribeRef.current as HTMLElement | null;
     const canEl = cancelRef.current as HTMLElement | null;
@@ -92,102 +98,151 @@ export default function Billing() {
 
   return (
     <s-page heading="Billing">
-      {/* Plan details */}
-      <s-section heading="SuperUpsell Pro">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        {/* Plan card */}
         <div
           style={{
-            padding: "20px",
-            border: "1px solid #e0e0e0",
-            borderRadius: "8px",
             backgroundColor: "#fff",
+            borderRadius: "12px",
+            border: "1px solid #E3E5E7",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <s-stack direction="block" gap="base">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontSize: "32px", fontWeight: 700 }}>$12.99</span>
-              <span style={{ fontSize: "14px", color: "#666" }}>/month</span>
+          <s-stack direction="block" gap="large-200">
+            <s-stack direction="block" gap="small-200">
+              <s-badge tone="info">Current plan</s-badge>
+              <s-text variant="headingLg">SuperUpsell Pro</s-text>
+            </s-stack>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
+              <span style={{ fontSize: "36px", fontWeight: 700, color: "#202223", letterSpacing: "-1px" }}>
+                $12.99
+              </span>
+              <span style={{ fontSize: "14px", color: "#6D7175" }}>/month</span>
             </div>
 
-            <s-text tone="neutral">
+            <s-text tone="subdued">
               14-day free trial included. No charge until the trial ends.
             </s-text>
 
-            <div style={{ marginTop: "8px" }}>
+            <div style={{ borderTop: "1px solid #E3E5E7", paddingTop: "16px" }}>
               <s-stack direction="block" gap="small-200">
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#22c55e" }}>&#10003;</span>
-                  <span style={{ fontSize: "14px" }}>Unlimited upsell offers</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#22c55e" }}>&#10003;</span>
-                  <span style={{ fontSize: "14px" }}>Product page, cart &amp; popup surfaces</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#22c55e" }}>&#10003;</span>
-                  <span style={{ fontSize: "14px" }}>Automatic discounts</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#22c55e" }}>&#10003;</span>
-                  <span style={{ fontSize: "14px" }}>Analytics dashboard</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#22c55e" }}>&#10003;</span>
-                  <span style={{ fontSize: "14px" }}>Full visual customization</span>
-                </div>
+                {FEATURES.map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="8" fill="#E4F5E9" />
+                      <path d="M5 8l2 2 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <s-text variant="bodySm">{f}</s-text>
+                  </div>
+                ))}
               </s-stack>
             </div>
           </s-stack>
         </div>
-      </s-section>
 
-      {/* Subscription status */}
-      <s-section heading="Subscription Status">
+        {/* Status card */}
         <div
           style={{
-            padding: "20px",
-            border: "1px solid #e0e0e0",
-            borderRadius: "8px",
             backgroundColor: "#fff",
+            borderRadius: "12px",
+            border: "1px solid #E3E5E7",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {hasActivePayment ? (
-            <s-stack direction="block" gap="base">
-              <s-banner tone="success">
-                Your subscription is active.
-                {subscription?.test ? " (test mode)" : ""}
-              </s-banner>
-              <s-button
-                ref={cancelRef}
-                variant="tertiary"
-                tone="critical"
-                {...(isBusy ? { loading: true } : {})}
-              >
-                Cancel subscription
-              </s-button>
-            </s-stack>
-          ) : (
-            <s-stack direction="block" gap="base">
-              <s-banner tone="warning">
-                You don&apos;t have an active subscription. Subscribe to access
-                all features.
-              </s-banner>
-              <s-button
-                ref={subscribeRef}
-                variant="primary"
-                {...(isBusy ? { loading: true } : {})}
-              >
-                Start 14-day free trial
-              </s-button>
-            </s-stack>
-          )}
+          <s-stack direction="block" gap="large-200">
+            <s-text variant="headingMd">Subscription Status</s-text>
+
+            {hasActivePayment ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    backgroundColor: "#E4F5E9",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="10" fill="#059669" />
+                    <path d="M6 10l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <s-text variant="bodySm">
+                    Your subscription is active.{subscription?.test ? " (test mode)" : ""}
+                  </s-text>
+                </div>
+
+                <div style={{ borderTop: "1px solid #E3E5E7", paddingTop: "16px" }}>
+                  <s-stack direction="block" gap="small-200">
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <s-text tone="subdued" variant="bodySm">Plan</s-text>
+                      <s-text variant="bodySm">{subscription?.name ?? "SuperUpsell Pro"}</s-text>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <s-text tone="subdued" variant="bodySm">Status</s-text>
+                      <s-badge tone="success">Active</s-badge>
+                    </div>
+                    {subscription?.test && (
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <s-text tone="subdued" variant="bodySm">Mode</s-text>
+                        <s-badge>Test</s-badge>
+                      </div>
+                    )}
+                  </s-stack>
+                </div>
+
+                <div style={{ marginTop: "auto", paddingTop: "8px" }}>
+                  <s-button
+                    ref={cancelRef}
+                    variant="tertiary"
+                    tone="critical"
+                    {...(isBusy ? { loading: true } : {})}
+                  >
+                    Cancel subscription
+                  </s-button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    backgroundColor: "#FFF4E4",
+                    borderRadius: "8px",
+                    padding: "12px 16px",
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="10" fill="#B98900" />
+                    <text x="10" y="14.5" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="bold">!</text>
+                  </svg>
+                  <s-text variant="bodySm">
+                    No active subscription. Subscribe to access all features.
+                  </s-text>
+                </div>
+
+                <div style={{ marginTop: "auto", paddingTop: "8px" }}>
+                  <s-button
+                    ref={subscribeRef}
+                    variant="primary"
+                    {...(isBusy ? { loading: true } : {})}
+                  >
+                    Start 14-day free trial
+                  </s-button>
+                </div>
+              </>
+            )}
+          </s-stack>
         </div>
-      </s-section>
+      </div>
     </s-page>
   );
 }

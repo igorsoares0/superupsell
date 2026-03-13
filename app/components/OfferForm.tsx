@@ -345,9 +345,9 @@ export function OfferForm({
       <s-page heading={`${isEditing ? "Edit" : "New"} ${surfLabel} Upsell`}>
         <s-link
           slot="breadcrumb-actions"
-          href={`/app/upsells/${surfaceSlug}`}
+          href="/app"
         >
-          {surfLabel} Offers
+          Home
         </s-link>
         <s-button
           ref={saveRef}

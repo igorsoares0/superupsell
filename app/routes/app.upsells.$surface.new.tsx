@@ -36,7 +36,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const offer = await createOffer(session.shop, surface, data);
   await syncOfferMetafield(admin, session.shop, surface);
   await syncDiscountFunction(admin, offer.id);
-  return redirect(`/app/upsells/${params.surface}`);
+  return redirect("/app");
 };
 
 export default function NewOffer() {

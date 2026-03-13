@@ -138,6 +138,18 @@ export function parseOfferFormData(formData: FormData): Record<string, any> {
 
 // ─── Queries ───
 
+export async function getAllOffers(shop: string) {
+  const offers = await prisma.upsellOffer.findMany({
+    where: { shop },
+    include: {
+      products: { orderBy: { position: "asc" } },
+      targets: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return offers.map(serializeOffer);
+}
+
 export async function getOffersBySurface(shop: string, surface: Surface) {
   const offers = await prisma.upsellOffer.findMany({
     where: { shop, surface },

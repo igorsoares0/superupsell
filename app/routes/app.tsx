@@ -3,10 +3,25 @@ import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticate } from "../shopify.server";
+import { authenticate, PLAN_NAME } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { billing: _billing } = await authenticate.admin(request);
+  const billing = _billing as any;
+
+  // Allow the billing page itself without requiring payment
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/app/billing")) {
+    await billing.require({
+      plans: [PLAN_NAME],
+      isTest: true,
+      onFailure: async () =>
+        billing.request({
+          plan: PLAN_NAME,
+          isTest: true,
+        }),
+    });
+  }
 
   // eslint-disable-next-line no-undef
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };

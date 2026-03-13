@@ -23,8 +23,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   // Enrich products and targets with titles/images from Shopify
   const allIds = [
-    ...offer.products.map((p) => p.productId),
-    ...offer.targets.map((t) => t.targetId),
+    ...offer.products.map((p: any) => p.productId),
+    ...offer.targets.map((t: any) => t.targetId),
   ];
 
   const nodeMap = new Map<string, { title: string; imageUrl?: string }>();
@@ -56,12 +56,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   const enrichedOffer = {
     ...offer,
-    products: offer.products.map((p) => ({
+    products: offer.products.map((p: any) => ({
       ...p,
       title: nodeMap.get(p.productId)?.title,
       imageUrl: nodeMap.get(p.productId)?.imageUrl,
     })),
-    targets: offer.targets.map((t) => ({
+    targets: offer.targets.map((t: any) => ({
       ...t,
       title: nodeMap.get(t.targetId)?.title,
       imageUrl: nodeMap.get(t.targetId)?.imageUrl,

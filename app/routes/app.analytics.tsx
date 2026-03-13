@@ -155,8 +155,8 @@ export default function Analytics() {
   return (
     <s-page heading="Analytics">
       {/* Filters */}
-      <s-section>
-        <s-stack direction="inline" gap="large-200" align-items="center">
+      <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <s-select ref={periodRef} label="Period" value={period}>
             {PERIOD_OPTIONS.map((o) => (
               <s-option key={o.value} value={o.value}>
@@ -172,102 +172,105 @@ export default function Analytics() {
               </s-option>
             ))}
           </s-select>
-        </s-stack>
-      </s-section>
+        </div>
+      </div>
 
       {/* KPI Cards */}
+      <div style={{ marginTop: "16px" }} />
       <s-grid gridTemplateColumns="1fr 1fr 1fr 1fr" gap="base">
         <KpiCard title="Impressions" value={totals.impressions.toLocaleString()} />
         <KpiCard title="Conversions" value={totals.conversions.toLocaleString()} />
-        <KpiCard title="Conversion Rate" value={`${totals.conversionRate}%`} />
+        <KpiCard title="Conv. Rate" value={`${totals.conversionRate}%`} />
         <KpiCard title="Revenue" value={`$${totals.revenue.toFixed(2)}`} />
       </s-grid>
 
       {/* Surface Breakdown */}
       {surfaceBreakdown.length > 0 && (
-        <s-section heading="By surface">
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #e0e0e0", textAlign: "left" }}>
-                  <th style={{ padding: "8px 12px" }}>Surface</th>
-                  <th style={{ padding: "8px 12px" }}>Impressions</th>
-                  <th style={{ padding: "8px 12px" }}>Conversions</th>
-                  <th style={{ padding: "8px 12px" }}>Conv. Rate</th>
-                  <th style={{ padding: "8px 12px" }}>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {surfaceBreakdown.map((row) => {
-                  const rate =
-                    row.impressions > 0
-                      ? ((row.conversions / row.impressions) * 100).toFixed(1)
-                      : "0.0";
-                  return (
-                    <tr key={row.surface} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                      <td style={{ padding: "8px 12px" }}>
-                        {SURFACE_LABELS[row.surface] || row.surface}
-                      </td>
-                      <td style={{ padding: "8px 12px" }}>{row.impressions.toLocaleString()}</td>
-                      <td style={{ padding: "8px 12px" }}>{row.conversions.toLocaleString()}</td>
-                      <td style={{ padding: "8px 12px" }}>{rate}%</td>
-                      <td style={{ padding: "8px 12px" }}>${row.revenue.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </s-box>
-        </s-section>
+        <>
+          <div style={{ marginTop: "16px" }} />
+          <s-section heading="By surface">
+            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", overflow: "hidden" }}>
+              <s-table>
+                <s-table-header-row>
+                  <s-table-header>Surface</s-table-header>
+                  <s-table-header>Impressions</s-table-header>
+                  <s-table-header>Conversions</s-table-header>
+                  <s-table-header>Conv. Rate</s-table-header>
+                  <s-table-header>Revenue</s-table-header>
+                </s-table-header-row>
+                <s-table-body>
+                  {surfaceBreakdown.map((row) => {
+                    const rate =
+                      row.impressions > 0
+                        ? ((row.conversions / row.impressions) * 100).toFixed(1)
+                        : "0.0";
+                    return (
+                      <s-table-row key={row.surface}>
+                        <s-table-cell>
+                          <s-badge>{SURFACE_LABELS[row.surface] || row.surface}</s-badge>
+                        </s-table-cell>
+                        <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{rate}%</s-table-cell>
+                        <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
+                      </s-table-row>
+                    );
+                  })}
+                </s-table-body>
+              </s-table>
+            </div>
+          </s-section>
+        </>
       )}
 
       {/* Daily Trend */}
       {dailyTrend.length > 0 && (
-        <s-section heading="Daily trend">
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #e0e0e0", textAlign: "left" }}>
-                  <th style={{ padding: "8px 12px" }}>Date</th>
-                  <th style={{ padding: "8px 12px" }}>Impressions</th>
-                  <th style={{ padding: "8px 12px" }}>Conversions</th>
-                  <th style={{ padding: "8px 12px" }}>Conv. Rate</th>
-                  <th style={{ padding: "8px 12px" }}>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dailyTrend.map((row) => {
-                  const rate =
-                    row.impressions > 0
-                      ? ((row.conversions / row.impressions) * 100).toFixed(1)
-                      : "0.0";
-                  return (
-                    <tr key={row.day} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                      <td style={{ padding: "8px 12px" }}>{row.day}</td>
-                      <td style={{ padding: "8px 12px" }}>{row.impressions.toLocaleString()}</td>
-                      <td style={{ padding: "8px 12px" }}>{row.conversions.toLocaleString()}</td>
-                      <td style={{ padding: "8px 12px" }}>{rate}%</td>
-                      <td style={{ padding: "8px 12px" }}>${row.revenue.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </s-box>
-        </s-section>
+        <>
+          <div style={{ marginTop: "4px" }} />
+          <s-section heading="Daily trend">
+            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", overflow: "hidden" }}>
+              <s-table>
+                <s-table-header-row>
+                  <s-table-header>Date</s-table-header>
+                  <s-table-header>Impressions</s-table-header>
+                  <s-table-header>Conversions</s-table-header>
+                  <s-table-header>Conv. Rate</s-table-header>
+                  <s-table-header>Revenue</s-table-header>
+                </s-table-header-row>
+                <s-table-body>
+                  {dailyTrend.map((row) => {
+                    const rate =
+                      row.impressions > 0
+                        ? ((row.conversions / row.impressions) * 100).toFixed(1)
+                        : "0.0";
+                    return (
+                      <s-table-row key={row.day}>
+                        <s-table-cell>{row.day}</s-table-cell>
+                        <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{rate}%</s-table-cell>
+                        <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
+                      </s-table-row>
+                    );
+                  })}
+                </s-table-body>
+              </s-table>
+            </div>
+          </s-section>
+        </>
       )}
 
       {/* Empty state */}
       {surfaceBreakdown.length === 0 && (
         <s-section>
-          <s-box padding="large-400" borderWidth="base" borderRadius="base">
+          <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "48px 24px", textAlign: "center" }}>
             <s-stack direction="block" gap="base" align-items="center">
-              <s-heading>No data yet</s-heading>
-              <s-paragraph>
+              <s-text variant="headingMd">No data yet</s-text>
+              <s-text tone="subdued">
                 Analytics data will appear here once your upsell widgets start receiving traffic.
-              </s-paragraph>
+              </s-text>
             </s-stack>
-          </s-box>
+          </div>
         </s-section>
       )}
     </s-page>
@@ -276,13 +279,11 @@ export default function Analytics() {
 
 function KpiCard({ title, value }: { title: string; value: string }) {
   return (
-    <s-box padding="large-300" borderWidth="base" borderRadius="base">
+    <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
       <s-stack direction="block" gap="small-200">
-        <s-text tone="neutral">
-          {title}
-        </s-text>
-        <s-heading>{value}</s-heading>
+        <s-text tone="subdued" variant="bodySm">{title}</s-text>
+        <s-text variant="headingLg">{value}</s-text>
       </s-stack>
-    </s-box>
+    </div>
   );
 }

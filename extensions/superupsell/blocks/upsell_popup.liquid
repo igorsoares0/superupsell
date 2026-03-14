@@ -73,7 +73,7 @@
 
                 <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
                   {% if offer.cardMode == 'checkbox' %}
-                    <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" checked style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
+                    <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                   {% endif %}
 
                   {% if offer.showImage and prod.featured_image %}

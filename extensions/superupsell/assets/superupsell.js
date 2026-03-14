@@ -227,12 +227,27 @@
   var _nativeInterceptBound = false;
   var _superupsellInternal = false;
 
+  function normalizeVariantId(rawId) {
+    if (rawId == null) return null;
+    var str = String(rawId).trim();
+    if (!str) return null;
+
+    var direct = parseInt(str, 10);
+    if (!isNaN(direct) && direct > 0) return direct;
+
+    var match = str.match(/(\d+)(?!.*\d)/);
+    if (!match) return null;
+
+    var extracted = parseInt(match[1], 10);
+    return !isNaN(extracted) && extracted > 0 ? extracted : null;
+  }
+
   function getCheckedUpsellItems() {
     var items = [];
     _interceptWidgets.forEach(function (widget) {
       widget.querySelectorAll(".superupsell-checkbox:checked").forEach(function (cb) {
-        var vid = cb.dataset.variantId;
-        if (vid) items.push({ id: parseInt(vid, 10), quantity: 1 });
+        var normalized = normalizeVariantId(cb.dataset.variantId);
+        if (normalized) items.push({ id: normalized, quantity: 1 });
       });
     });
     return items;
@@ -244,8 +259,7 @@
     if (_nativeInterceptBound) return;
     _nativeInterceptBound = true;
 
-    // 1. Monkey-patch fetch — merge upsell items INTO the original request body
-    //    so everything is added in a single call (avoids race with navigation/drawer).
+    // 1. Monkey-patch fetch.
     var originalFetch = window.fetch;
     window.fetch = function (url, options) {
       if (_superupsellInternal) return originalFetch.apply(this, arguments);
@@ -259,51 +273,30 @@
       var upsellItems = getCheckedUpsellItems();
       if (upsellItems.length === 0) return originalFetch.apply(this, arguments);
 
-      // Try to merge upsell items into the request body
-      var body = options ? options.body : null;
-      if (typeof body === "string") {
-        try {
-          var parsed = JSON.parse(body);
-          if (parsed.items && Array.isArray(parsed.items)) {
-            // items array format — append upsell items
-            parsed.items = parsed.items.concat(upsellItems);
-          } else if (parsed.id) {
-            // single-item format { id, quantity } — convert to items array
-            parsed = {
-              items: [{ id: parseInt(parsed.id, 10), quantity: parseInt(parsed.quantity || 1, 10) }].concat(upsellItems),
-            };
-          }
-
-          var newOptions = {};
-          for (var k in options) newOptions[k] = options[k];
-          newOptions.body = JSON.stringify(parsed);
-          newOptions.headers = { "Content-Type": "application/json" };
-
-          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
-          return originalFetch.call(this, urlStr, newOptions).then(function (res) {
-            if (res.ok) _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
-            return res;
-          });
-        } catch (e) { /* JSON parse failed, fall through */ }
-      }
-
-      // Fallback for FormData or other body types: let original go through,
-      // then add upsell items with keepalive to survive navigation.
+      // Keep native request untouched, then append upsell items in a second call.
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
       return originalFetch.apply(this, arguments).then(function (res) {
-        if (res.ok && getCheckedUpsellItems().length > 0) {
-          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
-          _superupsellInternal = true;
-          originalFetch("/cart/add.js", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ items: getCheckedUpsellItems() }),
-            keepalive: true,
-          }).then(function () {
-            _superupsellInternal = false;
+        if (!res.ok) return res;
+
+        var appendItems = getCheckedUpsellItems();
+        if (appendItems.length === 0) return res;
+
+        _superupsellInternal = true;
+        return originalFetch("/cart/add.js", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: appendItems }),
+          keepalive: true,
+        }).then(function (upsellRes) {
+          _superupsellInternal = false;
+          if (upsellRes && upsellRes.ok) {
             _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
-          }).catch(function () { _superupsellInternal = false; });
-        }
-        return res;
+          }
+          return res;
+        }).catch(function () {
+          _superupsellInternal = false;
+          return res;
+        });
       });
     };
 
@@ -324,27 +317,27 @@
         this._suUrl.indexOf("/cart/add") !== -1
       ) {
         var upsellItems = getCheckedUpsellItems();
-        if (upsellItems.length > 0 && typeof body === "string") {
-          try {
-            var parsed = JSON.parse(body);
-            if (parsed.items && Array.isArray(parsed.items)) {
-              parsed.items = parsed.items.concat(upsellItems);
-            } else if (parsed.id) {
-              parsed = {
-                items: [
-                  { id: parseInt(parsed.id, 10), quantity: parseInt(parsed.quantity || 1, 10) },
-                ].concat(upsellItems),
-              };
-            }
-            _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
-            var xhrSelf = this;
-            this.addEventListener("load", function () {
-              if (xhrSelf.status >= 200 && xhrSelf.status < 300) {
+        if (upsellItems.length > 0) {
+          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+          var xhrFallbackSelf = this;
+          this.addEventListener("load", function () {
+            if (!(xhrFallbackSelf.status >= 200 && xhrFallbackSelf.status < 300)) return;
+
+            _superupsellInternal = true;
+            originalFetch("/cart/add.js", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ items: upsellItems }),
+              keepalive: true,
+            }).then(function (upsellRes) {
+              _superupsellInternal = false;
+              if (upsellRes && upsellRes.ok) {
                 _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
               }
+            }).catch(function () {
+              _superupsellInternal = false;
             });
-            return origXHRSend.call(this, JSON.stringify(parsed));
-          } catch (e) { /* fall through */ }
+          });
         }
       }
       return origXHRSend.apply(this, arguments);
@@ -364,7 +357,8 @@
       var formData = new FormData(form);
       var origId = formData.get("id");
       var origQty = parseInt(formData.get("quantity") || "1", 10);
-      if (origId) items.push({ id: parseInt(origId, 10), quantity: origQty });
+      var normalizedFormId = normalizeVariantId(origId);
+      if (normalizedFormId) items.push({ id: normalizedFormId, quantity: origQty });
       items = items.concat(upsellItems);
 
       _interceptWidgets.forEach(function (w) { trackEvent("click", w); });

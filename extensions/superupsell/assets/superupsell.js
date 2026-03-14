@@ -253,14 +253,54 @@
     return items;
   }
 
+  /**
+   * After adding upsell items, re-fetch cart drawer sections and update DOM.
+   * Uses Section Rendering API so the drawer shows ALL items (main + upsell).
+   * Also patches the checkout button to go straight to /checkout.
+   */
+  function refreshCartDrawer(originalFetch) {
+    originalFetch("/?sections=cart-drawer,cart-icon-bubble")
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (sections) {
+        if (!sections) return;
+        for (var id in sections) {
+          var el = document.getElementById("shopify-section-" + id);
+          if (el) el.innerHTML = sections[id];
+        }
+        patchCheckoutButtons();
+      })
+      .catch(function () {});
+  }
+
+  /**
+   * Make cart-drawer checkout buttons navigate directly to /checkout
+   * instead of submitting a form to /cart (which shows the cart page first).
+   */
+  function patchCheckoutButtons() {
+    var btns = document.querySelectorAll(
+      'button[name="checkout"], .cart__checkout-button, [name="checkout"][type="submit"]'
+    );
+    btns.forEach(function (btn) {
+      // Only patch buttons inside a cart drawer / cart sidebar
+      if (!btn.closest('#CartDrawer, cart-drawer, .drawer, .cart-drawer, .sidebar-cart, [id*="cart-drawer"]')) return;
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.href = "/checkout";
+      });
+    });
+  }
+
   function interceptNativeAddToCart(widget) {
     _interceptWidgets.push(widget);
 
     if (_nativeInterceptBound) return;
     _nativeInterceptBound = true;
 
-    // 1. Monkey-patch fetch.
     var originalFetch = window.fetch;
+
+    // 1. Monkey-patch fetch — let the original request go through unchanged,
+    //    then add upsell items and refresh the cart drawer sections.
     window.fetch = function (url, options) {
       if (_superupsellInternal) return originalFetch.apply(this, arguments);
 
@@ -273,34 +313,35 @@
       var upsellItems = getCheckedUpsellItems();
       if (upsellItems.length === 0) return originalFetch.apply(this, arguments);
 
-      // Keep native request untouched, then append upsell items in a second call.
       _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+
+      // Let the theme's original request go through untouched
       return originalFetch.apply(this, arguments).then(function (res) {
         if (!res.ok) return res;
 
-        var appendItems = getCheckedUpsellItems();
-        if (appendItems.length === 0) return res;
+        var items = getCheckedUpsellItems();
+        if (items.length === 0) return res;
 
+        // Add upsell items in a follow-up call (don't block the response)
         _superupsellInternal = true;
-        return originalFetch("/cart/add.js", {
+        originalFetch("/cart/add.js", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: appendItems }),
-          keepalive: true,
+          body: JSON.stringify({ items: items }),
         }).then(function (upsellRes) {
           _superupsellInternal = false;
           if (upsellRes && upsellRes.ok) {
             _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            // Refresh the cart drawer so it shows ALL items and checkout works
+            refreshCartDrawer(originalFetch);
           }
-          return res;
-        }).catch(function () {
-          _superupsellInternal = false;
-          return res;
-        });
+        }).catch(function () { _superupsellInternal = false; });
+
+        return res;
       });
     };
 
-    // 2. Intercept XMLHttpRequest for themes using XHR instead of fetch
+    // 2. Intercept XMLHttpRequest (older themes)
     var origXHROpen = XMLHttpRequest.prototype.open;
     var origXHRSend = XMLHttpRequest.prototype.send;
 
@@ -319,31 +360,28 @@
         var upsellItems = getCheckedUpsellItems();
         if (upsellItems.length > 0) {
           _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
-          var xhrFallbackSelf = this;
+          var self = this;
           this.addEventListener("load", function () {
-            if (!(xhrFallbackSelf.status >= 200 && xhrFallbackSelf.status < 300)) return;
-
+            if (!(self.status >= 200 && self.status < 300)) return;
             _superupsellInternal = true;
             originalFetch("/cart/add.js", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ items: upsellItems }),
-              keepalive: true,
             }).then(function (upsellRes) {
               _superupsellInternal = false;
               if (upsellRes && upsellRes.ok) {
                 _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+                refreshCartDrawer(originalFetch);
               }
-            }).catch(function () {
-              _superupsellInternal = false;
-            });
+            }).catch(function () { _superupsellInternal = false; });
           });
         }
       }
       return origXHRSend.apply(this, arguments);
     };
 
-    // 3. Also intercept traditional form submissions (non-AJAX themes)
+    // 3. Traditional form submissions (non-AJAX themes)
     document.addEventListener("submit", function (e) {
       var form = e.target;
       if (!form || !form.action || form.action.indexOf("/cart/add") === -1) return;
@@ -355,10 +393,8 @@
 
       var items = [];
       var formData = new FormData(form);
-      var origId = formData.get("id");
-      var origQty = parseInt(formData.get("quantity") || "1", 10);
-      var normalizedFormId = normalizeVariantId(origId);
-      if (normalizedFormId) items.push({ id: normalizedFormId, quantity: origQty });
+      var normalizedFormId = normalizeVariantId(formData.get("id"));
+      if (normalizedFormId) items.push({ id: normalizedFormId, quantity: parseInt(formData.get("quantity") || "1", 10) });
       items = items.concat(upsellItems);
 
       _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
@@ -384,9 +420,7 @@
         });
     });
 
-    // 4. Handle "Buy it Now" / dynamic checkout buttons
-    //    Intercepts clicks on common Shopify payment button containers
-    //    and redirects to /checkout with upsell items included.
+    // 4. "Buy it Now" / dynamic checkout buttons
     document.addEventListener("click", function (e) {
       if (_interceptWidgets.length === 0) return;
 
@@ -401,7 +435,6 @@
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      // Gather main product variant from the product form on the page
       var variantInput = document.querySelector(
         "form[action*='/cart/add'] [name='id'], product-form [name='id'], .product-form [name='id']"
       );
@@ -434,7 +467,7 @@
         .catch(function () {
           _superupsellInternal = false;
         });
-    }, true); // capture phase — fires before Shopify's own handler
+    }, true);
   }
 
   // ─── Bind buttons ───
@@ -578,6 +611,7 @@
     trackImpressions();
     initSliders();
     initPopup();
+    patchCheckoutButtons();
   }
 
   if (document.readyState === "loading") {

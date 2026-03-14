@@ -72,20 +72,27 @@ fn cart_lines_discounts_generate_run(
         return no_discount;
     }
 
+    // One candidate per cart line so Shopify shows the correct label on each
+    // line instead of grouping them as a single "BUNDLE DISCOUNT".
+    let candidates: Vec<schema::ProductDiscountCandidate> = targets
+        .into_iter()
+        .map(|target| schema::ProductDiscountCandidate {
+            targets: vec![target],
+            message: Some(config.discount_label.clone()),
+            value: schema::ProductDiscountCandidateValue::Percentage(
+                schema::Percentage {
+                    value: Decimal(config.percentage),
+                },
+            ),
+            associated_discount_code: None,
+        })
+        .collect();
+
     Ok(schema::CartLinesDiscountsGenerateRunResult {
         operations: vec![schema::CartOperation::ProductDiscountsAdd(
             schema::ProductDiscountsAddOperation {
-                selection_strategy: schema::ProductDiscountSelectionStrategy::First,
-                candidates: vec![schema::ProductDiscountCandidate {
-                    targets,
-                    message: Some(config.discount_label),
-                    value: schema::ProductDiscountCandidateValue::Percentage(
-                        schema::Percentage {
-                            value: Decimal(config.percentage),
-                        },
-                    ),
-                    associated_discount_code: None,
-                }],
+                selection_strategy: schema::ProductDiscountSelectionStrategy::All,
+                candidates,
             },
         )],
     })

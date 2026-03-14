@@ -33,9 +33,9 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     return { errors };
   }
 
-  const offer = await createOffer(session.shop, surface, data);
+  await createOffer(session.shop, surface, data);
   await syncOfferMetafield(admin, session.shop, surface);
-  await syncDiscountFunction(admin, offer.id);
+  await syncDiscountFunction(admin, session.shop);
   return redirect("/app");
 };
 

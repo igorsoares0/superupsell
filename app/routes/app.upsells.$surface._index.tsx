@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 import {
   parseSurfaceSlug,
   surfaceLabel,
@@ -10,7 +11,6 @@ import {
   deleteOffer,
   syncOfferMetafield,
   syncDiscountFunction,
-  cleanupDiscountForOffer,
 } from "../models/offer.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -36,19 +36,27 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const intent = formData.get("intent");
   const offerId = formData.get("offerId") as string;
 
+  let knownDiscountId: string | null = null;
+
   switch (intent) {
     case "toggle":
       await toggleOfferActive(offerId, session.shop);
-      await syncDiscountFunction(admin, offerId);
       break;
-    case "delete":
-      await cleanupDiscountForOffer(admin, offerId, session.shop);
+    case "delete": {
+      // Capture discount ID before the row is deleted
+      const doomed = await prisma.upsellOffer.findFirst({
+        where: { id: offerId, shop: session.shop },
+        select: { shopifyDiscountId: true },
+      });
+      knownDiscountId = doomed?.shopifyDiscountId ?? null;
       await deleteOffer(offerId, session.shop);
       break;
+    }
   }
 
-  // Sync metafield after any change
+  // Rebuild the single consolidated discount and metafield
   await syncOfferMetafield(admin, session.shop, surface);
+  await syncDiscountFunction(admin, session.shop, knownDiscountId);
 
   return { ok: true };
 };

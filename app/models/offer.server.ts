@@ -330,33 +330,89 @@ async function getDiscountFunctionId(
 }
 
 /**
- * Sync the Shopify automatic discount for an offer.
- * Creates/updates/deletes the automatic discount linked to our function.
- * Called after create, update, or toggle.
+ * Sync a single consolidated Shopify automatic discount for the entire shop.
+ * Aggregates ALL active offers into one discount node so each product gets
+ * exactly one discount at checkout (highest percentage wins when a product
+ * appears in multiple offers).
+ *
+ * @param knownDiscountId  Pass the shopifyDiscountId of a just-deleted offer
+ *                         so we can still clean it up even though the row is gone.
  */
 export async function syncDiscountFunction(
   admin: { graphql: Function },
-  offerId: string,
+  shop: string,
+  knownDiscountId?: string | null,
 ) {
-  const offer = await prisma.upsellOffer.findFirst({
-    where: { id: offerId },
+  // 1. Load every offer for this shop
+  const allOffers = await prisma.upsellOffer.findMany({
+    where: { shop },
     include: { products: true },
   });
-  if (!offer) return;
 
-  const needsDiscount =
-    offer.isActive &&
-    Number(offer.discountPercentage) > 0 &&
-    offer.products.length > 0;
+  const activeOffers = allOffers.filter(
+    (o) =>
+      o.isActive &&
+      Number(o.discountPercentage) > 0 &&
+      o.products.length > 0,
+  );
+
+  // 2. Collect every Shopify discount ID we know about
+  const discountIdSet = new Set<string>();
+  for (const o of allOffers) {
+    if (o.shopifyDiscountId) discountIdSet.add(o.shopifyDiscountId);
+  }
+  if (knownDiscountId) discountIdSet.add(knownDiscountId);
+  const allDiscountIds = Array.from(discountIdSet);
+
+  // 3. Build per-product entries (deduplicated — highest percentage wins)
+  const productMap = new Map<
+    string,
+    { percentage: number; discountLabel: string }
+  >();
+  for (const offer of activeOffers) {
+    const pct = Number(offer.discountPercentage);
+    for (const p of offer.products) {
+      const existing = productMap.get(p.productId);
+      if (!existing || pct > existing.percentage) {
+        productMap.set(p.productId, {
+          percentage: pct,
+          discountLabel: offer.discountLabel,
+        });
+      }
+    }
+  }
+
+  const entries = Array.from(productMap.entries()).map(
+    ([productId, settings]) => ({
+      productId,
+      ...settings,
+    }),
+  );
+
+  const needsDiscount = entries.length > 0;
 
   if (needsDiscount) {
-    const config = JSON.stringify({
-      percentage: Number(offer.discountPercentage),
-      discountLabel: offer.discountLabel,
-      productIds: offer.products.map((p) => p.productId),
-    });
+    const config = JSON.stringify({ entries });
 
-    if (offer.shopifyDiscountId) {
+    // Keep the first existing discount node, delete extras
+    let keepId: string | null = allDiscountIds[0] ?? null;
+    for (const id of allDiscountIds.slice(1)) {
+      try {
+        await admin.graphql(
+          `mutation discountDelete($id: ID!) {
+            discountAutomaticDelete(id: $id) {
+              deletedAutomaticDiscountId
+              userErrors { field message }
+            }
+          }`,
+          { variables: { id } },
+        );
+      } catch {
+        // Ignore — discount may already be gone
+      }
+    }
+
+    if (keepId) {
       // Update the existing discount's config metafield
       await admin.graphql(
         `mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
@@ -369,7 +425,7 @@ export async function syncDiscountFunction(
           variables: {
             metafields: [
               {
-                ownerId: offer.shopifyDiscountId,
+                ownerId: keepId,
                 namespace: METAFIELD_NAMESPACE,
                 key: DISCOUNT_METAFIELD_KEY,
                 value: config,
@@ -383,7 +439,9 @@ export async function syncDiscountFunction(
       // Create a new automatic discount linked to our function
       const functionId = await getDiscountFunctionId(admin);
       if (!functionId) {
-        console.error("SuperUpsell: discount function not found — deploy the extension first");
+        console.error(
+          "SuperUpsell: discount function not found — deploy the extension first",
+        );
         return;
       }
 
@@ -397,7 +455,7 @@ export async function syncDiscountFunction(
         {
           variables: {
             discount: {
-              title: `SuperUpsell: ${offer.upsellName}`,
+              title: "SuperUpsell Discount",
               functionId,
               startsAt: new Date().toISOString(),
               discountClasses: ["PRODUCT"],
@@ -426,59 +484,40 @@ export async function syncDiscountFunction(
         return;
       }
 
-      const discountId =
+      keepId =
         result.data?.discountAutomaticAppCreate?.automaticAppDiscount
-          ?.discountId;
-      if (discountId) {
-        await prisma.upsellOffer.update({
-          where: { id: offerId },
-          data: { shopifyDiscountId: discountId },
-        });
-      }
+          ?.discountId ?? null;
     }
-  } else {
-    // Offer inactive or no discount — remove the Shopify discount if it exists
-    if (offer.shopifyDiscountId) {
-      await admin.graphql(
-        `mutation discountDelete($id: ID!) {
-          discountAutomaticDelete(id: $id) {
-            deletedAutomaticDiscountId
-            userErrors { field message }
-          }
-        }`,
-        { variables: { id: offer.shopifyDiscountId } },
-      );
-      await prisma.upsellOffer.update({
-        where: { id: offerId },
-        data: { shopifyDiscountId: null },
+
+    // Store the single discount ID on all offers in this shop
+    if (keepId) {
+      await prisma.upsellOffer.updateMany({
+        where: { shop },
+        data: { shopifyDiscountId: keepId },
       });
     }
-  }
-}
-
-/**
- * Clean up the Shopify discount before deleting an offer from the DB.
- */
-export async function cleanupDiscountForOffer(
-  admin: { graphql: Function },
-  offerId: string,
-  shop: string,
-) {
-  const offer = await prisma.upsellOffer.findFirst({
-    where: { id: offerId, shop },
-    select: { shopifyDiscountId: true },
-  });
-  if (!offer?.shopifyDiscountId) return;
-
-  await admin.graphql(
-    `mutation discountDelete($id: ID!) {
-      discountAutomaticDelete(id: $id) {
-        deletedAutomaticDiscountId
-        userErrors { field message }
+  } else {
+    // No active offers — delete all discount nodes and clear IDs
+    for (const id of allDiscountIds) {
+      try {
+        await admin.graphql(
+          `mutation discountDelete($id: ID!) {
+            discountAutomaticDelete(id: $id) {
+              deletedAutomaticDiscountId
+              userErrors { field message }
+            }
+          }`,
+          { variables: { id } },
+        );
+      } catch {
+        // Ignore
       }
-    }`,
-    { variables: { id: offer.shopifyDiscountId } },
-  );
+    }
+    await prisma.upsellOffer.updateMany({
+      where: { shop },
+      data: { shopifyDiscountId: null },
+    });
+  }
 }
 
 // ─── Mutations ───

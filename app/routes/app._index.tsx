@@ -2,13 +2,13 @@ import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useLoaderData, useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 import {
   getAllOffers,
   toggleOfferActive,
   deleteOffer,
   syncOfferMetafield,
   syncDiscountFunction,
-  cleanupDiscountForOffer,
 } from "../models/offer.server";
 import type { Surface } from "@prisma/client";
 
@@ -59,20 +59,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const offerId = formData.get("offerId") as string;
   const offerSurface = formData.get("surface") as Surface;
 
+  let knownDiscountId: string | null = null;
+
   switch (intent) {
     case "toggle":
       await toggleOfferActive(offerId, session.shop);
-      await syncDiscountFunction(admin, offerId);
       break;
-    case "delete":
-      await cleanupDiscountForOffer(admin, offerId, session.shop);
+    case "delete": {
+      const doomed = await prisma.upsellOffer.findFirst({
+        where: { id: offerId, shop: session.shop },
+        select: { shopifyDiscountId: true },
+      });
+      knownDiscountId = doomed?.shopifyDiscountId ?? null;
       await deleteOffer(offerId, session.shop);
       break;
+    }
   }
 
   if (offerSurface) {
     await syncOfferMetafield(admin, session.shop, offerSurface);
   }
+  await syncDiscountFunction(admin, session.shop, knownDiscountId);
 
   return { ok: true };
 };

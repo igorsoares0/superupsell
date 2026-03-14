@@ -63,6 +63,12 @@
       });
   }
 
+  // ─── Helpers ───
+
+  function isCartPage() {
+    return /^\/cart\/?$/i.test(window.location.pathname);
+  }
+
   // ─── Add to cart ───
 
   function getWidget(btn) {
@@ -98,12 +104,19 @@
         trackEvent("conversion", widget, { variantId: variantId });
 
         btn.innerHTML = "\u2713 Added";
+
+        // On the cart page, reload so the cart table shows the new item
+        if (isCartPage()) {
+          setTimeout(function () { window.location.reload(); }, 600);
+          return;
+        }
+
         setTimeout(function () {
           btn.innerHTML = originalHTML;
           btn.disabled = false;
         }, 1500);
 
-        // Refresh cart UI
+        // Refresh cart UI (drawer / icon)
         try {
           var cartRes = await fetch(
             "/?sections=cart-drawer,cart-icon-bubble"
@@ -165,6 +178,13 @@
       if (res.ok) {
         trackEvent("conversion", widget);
         btn.textContent = "\u2713 Added";
+
+        // On the cart page, reload so the cart table shows the new items
+        if (isCartPage()) {
+          setTimeout(function () { window.location.reload(); }, 600);
+          return;
+        }
+
         setTimeout(function () {
           btn.textContent = originalText;
           btn.disabled = false;

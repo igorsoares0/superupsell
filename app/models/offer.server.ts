@@ -121,6 +121,7 @@ export function parseOfferFormData(formData: FormData): Record<string, any> {
 
   data.showVariants = formData.get("showVariants") === "true";
   data.showImage = formData.get("showImage") === "true";
+  data.showButton = formData.get("showButton") === "true";
   data.isActive = formData.get("isActive") === "true";
 
   try {
@@ -270,6 +271,7 @@ export async function syncOfferMetafield(
     showImage: offer.showImage,
     layout: offer.layout,
     cardMode: offer.cardMode,
+    showButton: offer.showButton,
     targetMode: offer.targetMode,
     targets: offer.targets.map((t) => ({
       targetType: t.targetType,
@@ -507,6 +509,7 @@ export async function createOffer(
       showImage: data.showImage !== false,
       layout: (data.layout as Layout) || "vertical",
       cardMode: (data.cardMode as any) || "button",
+      showButton: data.showButton !== false,
       titleText: String(data.titleText || "You may also like"),
       buttonText: String(data.buttonText || "Add to cart"),
       buttonColor: String(data.buttonColor || "#000000"),
@@ -571,6 +574,7 @@ export async function updateOffer(
         showImage: data.showImage !== false,
         layout: (data.layout as Layout) || "vertical",
         cardMode: (data.cardMode as any) || "button",
+        showButton: data.showButton !== false,
         titleText: String(data.titleText),
         buttonText: String(data.buttonText),
         buttonColor: String(data.buttonColor),

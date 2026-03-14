@@ -125,7 +125,7 @@
         {% endfor %}
       </div>
 
-      {% if offer.cardMode == 'checkbox' %}
+      {% if offer.cardMode == 'checkbox' and offer.showButton != false %}
         {% assign bulk_radius = radius | minus: 4 | at_least: 4 %}
         <button class="superupsell-bulk-add" style="width:100%;margin-top:12px;background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ bulk_radius }}px;padding:10px 20px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:600;cursor:pointer;">
           {{ offer.buttonText | default: 'Add to cart' }}

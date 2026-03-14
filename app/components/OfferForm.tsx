@@ -22,6 +22,7 @@ export type SerializedOffer = {
   showImage: boolean;
   layout: string;
   cardMode: string;
+  showButton: boolean;
   titleText: string;
   buttonText: string;
   buttonColor: string;
@@ -62,6 +63,7 @@ const DEFAULTS = {
   showImage: true,
   layout: "vertical",
   cardMode: "button",
+  showButton: true,
   titleText: "You may also like",
   buttonText: "Add to cart",
   buttonColor: "#000000",
@@ -84,7 +86,7 @@ const NUMBER_FIELDS = new Set([
   "cornerRadius",
 ]);
 
-const BOOLEAN_FIELDS = new Set(["isActive", "showVariants", "showImage"]);
+const BOOLEAN_FIELDS = new Set(["isActive", "showVariants", "showImage", "showButton"]);
 
 /** Attach a native click listener to a ref, avoiding React synthetic events
  *  which don't work on Polaris web components in React 18. */
@@ -147,6 +149,7 @@ export function OfferForm({
   const targetModeRef = useRef<any>(null);
   const layoutRef = useRef<any>(null);
   const cardModeRef = useRef<any>(null);
+  const showButtonRef = useRef<any>(null);
 
   const isEditing = Boolean(offer?.id);
   const isSaving = navigation.state === "submitting";
@@ -162,6 +165,7 @@ export function OfferForm({
     showImage: offer?.showImage ?? DEFAULTS.showImage,
     layout: offer?.layout ?? DEFAULTS.layout,
     cardMode: offer?.cardMode ?? DEFAULTS.cardMode,
+    showButton: offer?.showButton ?? DEFAULTS.showButton,
     titleText: offer?.titleText ?? DEFAULTS.titleText,
     buttonText: offer?.buttonText ?? DEFAULTS.buttonText,
     buttonColor: offer?.buttonColor ?? DEFAULTS.buttonColor,
@@ -307,6 +311,7 @@ export function OfferForm({
 
     data.set("showVariants", String(form.showVariants));
     data.set("showImage", String(form.showImage));
+    data.set("showButton", String(form.showButton));
     data.set("isActive", String(form.isActive));
 
     data.set("targets", JSON.stringify(selectedTargets));
@@ -333,6 +338,19 @@ export function OfferForm({
   useSwitchToggle(isActiveRef, (v) => setForm((prev) => ({ ...prev, isActive: v })));
   useSwitchToggle(showVariantsRef, (v) => setForm((prev) => ({ ...prev, showVariants: v })));
   useSwitchToggle(showImageRef, (v) => setForm((prev) => ({ ...prev, showImage: v })));
+  // showButton switch is conditionally rendered (only when cardMode=checkbox),
+  // so useSwitchToggle (which binds once on mount) won't work. Re-bind on cardMode change.
+  useEffect(() => {
+    const el = showButtonRef.current as HTMLElement | null;
+    if (!el) return;
+    const listener = () => {
+      requestAnimationFrame(() => {
+        setForm((prev) => ({ ...prev, showButton: (el as any).checked }));
+      });
+    };
+    el.addEventListener("click", listener);
+    return () => el.removeEventListener("click", listener);
+  }, [form.cardMode]);
 
   // Direct listeners for <s-select> (change event has composed:false in Shadow DOM)
   useEffect(() => {
@@ -558,6 +576,14 @@ export function OfferForm({
                   label="Show product image"
                   checked={form.showImage || undefined}
                 />
+
+                {form.cardMode === "checkbox" && (
+                  <s-switch
+                    ref={showButtonRef}
+                    label="Show bulk add-to-cart button"
+                    checked={form.showButton || undefined}
+                  />
+                )}
               </s-stack>
             </div>
 

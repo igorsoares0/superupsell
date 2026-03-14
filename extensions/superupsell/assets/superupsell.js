@@ -83,6 +83,7 @@
     trackEvent("click", widget, { variantId: variantId });
 
     try {
+      _superupsellInternal = true;
       var res = await fetch("/cart/add.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,6 +91,7 @@
           items: [{ id: parseInt(variantId, 10), quantity: 1 }],
         }),
       });
+      _superupsellInternal = false;
 
       if (res.ok) {
         // Track conversion
@@ -122,6 +124,7 @@
         }, 1500);
       }
     } catch (_) {
+      _superupsellInternal = false;
       btn.innerHTML = originalHTML;
       btn.disabled = false;
     }
@@ -151,11 +154,13 @@
     trackEvent("click", widget);
 
     try {
+      _superupsellInternal = true;
       var res = await fetch("/cart/add.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: items }),
       });
+      _superupsellInternal = false;
 
       if (res.ok) {
         trackEvent("conversion", widget);
@@ -183,6 +188,7 @@
         }, 1500);
       }
     } catch (_) {
+      _superupsellInternal = false;
       btn.textContent = originalText;
       btn.disabled = false;
     }
@@ -202,9 +208,239 @@
       });
     });
 
-    container.querySelectorAll(".superupsell-bulk-add").forEach(function (btn) {
+    var bulkBtns = container.querySelectorAll(".superupsell-bulk-add");
+    bulkBtns.forEach(function (btn) {
       btn.addEventListener("click", handleBulkAdd);
     });
+
+    // If checkbox mode, intercept native add-to-cart and buy-it-now buttons
+    // to also add checked upsell items alongside the main product
+    var hasCheckboxes = container.querySelectorAll(".superupsell-checkbox").length > 0;
+    if (hasCheckboxes) {
+      interceptNativeAddToCart(container);
+    }
+  }
+
+  // ─── Native add-to-cart interception (checkbox mode) ───
+
+  var _interceptWidgets = [];
+  var _nativeInterceptBound = false;
+  var _superupsellInternal = false;
+
+  function getCheckedUpsellItems() {
+    var items = [];
+    _interceptWidgets.forEach(function (widget) {
+      widget.querySelectorAll(".superupsell-checkbox:checked").forEach(function (cb) {
+        var vid = cb.dataset.variantId;
+        if (vid) items.push({ id: parseInt(vid, 10), quantity: 1 });
+      });
+    });
+    return items;
+  }
+
+  function interceptNativeAddToCart(widget) {
+    _interceptWidgets.push(widget);
+
+    if (_nativeInterceptBound) return;
+    _nativeInterceptBound = true;
+
+    // 1. Monkey-patch fetch — merge upsell items INTO the original request body
+    //    so everything is added in a single call (avoids race with navigation/drawer).
+    var originalFetch = window.fetch;
+    window.fetch = function (url, options) {
+      if (_superupsellInternal) return originalFetch.apply(this, arguments);
+
+      var urlStr = typeof url === "string" ? url : (url instanceof Request ? url.url : "");
+      if (urlStr.indexOf("/cart/add") === -1) return originalFetch.apply(this, arguments);
+
+      var method = (options && options.method) ? options.method.toUpperCase() : (url instanceof Request ? url.method.toUpperCase() : "GET");
+      if (method !== "POST") return originalFetch.apply(this, arguments);
+
+      var upsellItems = getCheckedUpsellItems();
+      if (upsellItems.length === 0) return originalFetch.apply(this, arguments);
+
+      // Try to merge upsell items into the request body
+      var body = options ? options.body : null;
+      if (typeof body === "string") {
+        try {
+          var parsed = JSON.parse(body);
+          if (parsed.items && Array.isArray(parsed.items)) {
+            // items array format — append upsell items
+            parsed.items = parsed.items.concat(upsellItems);
+          } else if (parsed.id) {
+            // single-item format { id, quantity } — convert to items array
+            parsed = {
+              items: [{ id: parseInt(parsed.id, 10), quantity: parseInt(parsed.quantity || 1, 10) }].concat(upsellItems),
+            };
+          }
+
+          var newOptions = {};
+          for (var k in options) newOptions[k] = options[k];
+          newOptions.body = JSON.stringify(parsed);
+          newOptions.headers = { "Content-Type": "application/json" };
+
+          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+          return originalFetch.call(this, urlStr, newOptions).then(function (res) {
+            if (res.ok) _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            return res;
+          });
+        } catch (e) { /* JSON parse failed, fall through */ }
+      }
+
+      // Fallback for FormData or other body types: let original go through,
+      // then add upsell items with keepalive to survive navigation.
+      return originalFetch.apply(this, arguments).then(function (res) {
+        if (res.ok && getCheckedUpsellItems().length > 0) {
+          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+          _superupsellInternal = true;
+          originalFetch("/cart/add.js", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: getCheckedUpsellItems() }),
+            keepalive: true,
+          }).then(function () {
+            _superupsellInternal = false;
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+          }).catch(function () { _superupsellInternal = false; });
+        }
+        return res;
+      });
+    };
+
+    // 2. Intercept XMLHttpRequest for themes using XHR instead of fetch
+    var origXHROpen = XMLHttpRequest.prototype.open;
+    var origXHRSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function () {
+      this._suMethod = (arguments[0] || "").toUpperCase();
+      this._suUrl = String(arguments[1] || "");
+      return origXHROpen.apply(this, arguments);
+    };
+
+    XMLHttpRequest.prototype.send = function (body) {
+      if (
+        !_superupsellInternal &&
+        this._suMethod === "POST" &&
+        this._suUrl.indexOf("/cart/add") !== -1
+      ) {
+        var upsellItems = getCheckedUpsellItems();
+        if (upsellItems.length > 0 && typeof body === "string") {
+          try {
+            var parsed = JSON.parse(body);
+            if (parsed.items && Array.isArray(parsed.items)) {
+              parsed.items = parsed.items.concat(upsellItems);
+            } else if (parsed.id) {
+              parsed = {
+                items: [
+                  { id: parseInt(parsed.id, 10), quantity: parseInt(parsed.quantity || 1, 10) },
+                ].concat(upsellItems),
+              };
+            }
+            _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+            var xhrSelf = this;
+            this.addEventListener("load", function () {
+              if (xhrSelf.status >= 200 && xhrSelf.status < 300) {
+                _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+              }
+            });
+            return origXHRSend.call(this, JSON.stringify(parsed));
+          } catch (e) { /* fall through */ }
+        }
+      }
+      return origXHRSend.apply(this, arguments);
+    };
+
+    // 3. Also intercept traditional form submissions (non-AJAX themes)
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!form || !form.action || form.action.indexOf("/cart/add") === -1) return;
+
+      var upsellItems = getCheckedUpsellItems();
+      if (upsellItems.length === 0) return;
+
+      e.preventDefault();
+
+      var items = [];
+      var formData = new FormData(form);
+      var origId = formData.get("id");
+      var origQty = parseInt(formData.get("quantity") || "1", 10);
+      if (origId) items.push({ id: parseInt(origId, 10), quantity: origQty });
+      items = items.concat(upsellItems);
+
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+
+      _superupsellInternal = true;
+      originalFetch("/cart/add.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items }),
+      })
+        .then(function (res) {
+          _superupsellInternal = false;
+          if (res.ok) {
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            window.location.href = "/cart";
+          } else {
+            form.submit();
+          }
+        })
+        .catch(function () {
+          _superupsellInternal = false;
+          form.submit();
+        });
+    });
+
+    // 4. Handle "Buy it Now" / dynamic checkout buttons
+    //    Intercepts clicks on common Shopify payment button containers
+    //    and redirects to /checkout with upsell items included.
+    document.addEventListener("click", function (e) {
+      if (_interceptWidgets.length === 0) return;
+
+      var btn = e.target.closest(
+        ".shopify-payment-button, [data-shopify='payment-button']"
+      );
+      if (!btn) return;
+
+      var upsellItems = getCheckedUpsellItems();
+      if (upsellItems.length === 0) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      // Gather main product variant from the product form on the page
+      var variantInput = document.querySelector(
+        "form[action*='/cart/add'] [name='id'], product-form [name='id'], .product-form [name='id']"
+      );
+      var items = upsellItems.slice();
+      if (variantInput) {
+        var qtyInput = document.querySelector(
+          "form[action*='/cart/add'] [name='quantity'], product-form [name='quantity']"
+        );
+        items.unshift({
+          id: parseInt(variantInput.value, 10),
+          quantity: parseInt((qtyInput && qtyInput.value) || "1", 10) || 1,
+        });
+      }
+
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+
+      _superupsellInternal = true;
+      originalFetch("/cart/add.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items }),
+      })
+        .then(function (res) {
+          _superupsellInternal = false;
+          if (res.ok) {
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            window.location.href = "/checkout";
+          }
+        })
+        .catch(function () {
+          _superupsellInternal = false;
+        });
+    }, true); // capture phase — fires before Shopify's own handler
   }
 
   // ─── Bind buttons ───

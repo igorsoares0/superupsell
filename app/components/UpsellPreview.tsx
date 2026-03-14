@@ -26,6 +26,7 @@ type FormState = {
   showImage: boolean;
   layout: string;
   cardMode: string;
+  showButton: boolean;
 };
 
 type Props = {
@@ -168,7 +169,7 @@ export function UpsellPreview({ form, products }: Props) {
           )}
 
           {/* Single button for checkbox mode */}
-          {isCheckbox && (
+          {isCheckbox && form.showButton && (
             <div style={btnStyle}>
               {form.buttonText || "Add to cart"} ({checked.size})
             </div>

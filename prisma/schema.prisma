@@ -82,6 +82,7 @@ model UpsellOffer {
   showImage          Boolean  @default(true)
   layout             Layout   @default(vertical)
   cardMode           CardMode @default(button)
+  showButton         Boolean  @default(true)
   titleText          String   @default("You may also like")
   buttonText         String   @default("Add to cart")
   buttonColor        String   @default("#000000")

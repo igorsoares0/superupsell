@@ -122,6 +122,7 @@ export function parseOfferFormData(formData: FormData): Record<string, any> {
   data.showVariants = formData.get("showVariants") === "true";
   data.showImage = formData.get("showImage") === "true";
   data.showButton = formData.get("showButton") === "true";
+  data.bundleWithMainProduct = formData.get("bundleWithMainProduct") === "true";
   data.isActive = formData.get("isActive") === "true";
 
   try {
@@ -272,6 +273,7 @@ export async function syncOfferMetafield(
     layout: offer.layout,
     cardMode: offer.cardMode,
     showButton: offer.showButton,
+    bundleWithMainProduct: offer.bundleWithMainProduct,
     targetMode: offer.targetMode,
     targets: offer.targets.map((t) => ({
       targetType: t.targetType,
@@ -549,6 +551,7 @@ export async function createOffer(
       layout: (data.layout as Layout) || "vertical",
       cardMode: (data.cardMode as any) || "button",
       showButton: data.showButton !== false,
+      bundleWithMainProduct: data.bundleWithMainProduct === true,
       titleText: String(data.titleText || "You may also like"),
       buttonText: String(data.buttonText || "Add to cart"),
       buttonColor: String(data.buttonColor || "#000000"),
@@ -614,6 +617,7 @@ export async function updateOffer(
         layout: (data.layout as Layout) || "vertical",
         cardMode: (data.cardMode as any) || "button",
         showButton: data.showButton !== false,
+        bundleWithMainProduct: data.bundleWithMainProduct === true,
         titleText: String(data.titleText),
         buttonText: String(data.buttonText),
         buttonColor: String(data.buttonColor),

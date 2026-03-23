@@ -69,6 +69,19 @@
     return /^\/cart\/?$/i.test(window.location.pathname);
   }
 
+  function shouldBundleWithMain(widget) {
+    if (!widget) return false;
+    return widget.dataset.bundleWithMain === "true";
+  }
+
+  function getMainVariantId(widget) {
+    if (!widget) return null;
+    var id = widget.dataset.mainVariantId;
+    if (!id) return null;
+    var parsed = parseInt(id, 10);
+    return (!isNaN(parsed) && parsed > 0) ? parsed : null;
+  }
+
   // ─── Add to cart ───
 
   function getWidget(btn) {
@@ -89,13 +102,19 @@
     trackEvent("click", widget, { variantId: variantId });
 
     try {
+      var items = [{ id: parseInt(variantId, 10), quantity: 1 }];
+      if (shouldBundleWithMain(widget)) {
+        var mainVid = getMainVariantId(widget);
+        if (mainVid) {
+          items.unshift({ id: mainVid, quantity: 1 });
+        }
+      }
+
       _superupsellInternal = true;
       var res = await fetch("/cart/add.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: [{ id: parseInt(variantId, 10), quantity: 1 }],
-        }),
+        body: JSON.stringify({ items: items }),
       });
       _superupsellInternal = false;
 
@@ -159,6 +178,13 @@
       if (vid) items.push({ id: parseInt(vid, 10), quantity: 1 });
     });
     if (items.length === 0) return;
+
+    if (shouldBundleWithMain(widget)) {
+      var mainVid = getMainVariantId(widget);
+      if (mainVid) {
+        items.unshift({ id: mainVid, quantity: 1 });
+      }
+    }
 
     var originalText = btn.textContent;
     btn.textContent = "Adding\u2026";

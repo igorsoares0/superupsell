@@ -27,6 +27,7 @@ type FormState = {
   layout: string;
   cardMode: string;
   showButton: boolean;
+  bundleWithMainProduct: boolean;
 };
 
 type Props = {

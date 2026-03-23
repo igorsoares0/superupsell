@@ -83,6 +83,7 @@ model UpsellOffer {
   layout             Layout   @default(vertical)
   cardMode           CardMode @default(button)
   showButton         Boolean  @default(true)
+  bundleWithMainProduct Boolean @default(false)
   titleText          String   @default("You may also like")
   buttonText         String   @default("Add to cart")
   buttonColor        String   @default("#000000")

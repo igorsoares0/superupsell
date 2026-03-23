@@ -82,6 +82,174 @@
     return (!isNaN(parsed) && parsed > 0) ? parsed : null;
   }
 
+  // ─── Cart sections & drawer ───
+
+  var CART_SECTIONS = "cart-drawer,cart-icon-bubble,cart-notification-product,cart-notification-button";
+
+  /** Render section HTML returned by /cart/add.js into the DOM. */
+  function renderSections(sections) {
+    if (!sections) return;
+    for (var id in sections) {
+      // 1. Standard Shopify section wrapper (cart-drawer, cart-icon-bubble)
+      var el = document.getElementById("shopify-section-" + id);
+      if (el) {
+        el.innerHTML = sections[id];
+        continue;
+      }
+      // 2. Dawn cart-notification uses direct IDs like #cart-notification-product
+      el = document.getElementById(id);
+      if (el) {
+        // Parse the returned section HTML and extract inner content
+        var tmp = document.createElement("div");
+        tmp.innerHTML = sections[id];
+        var inner = tmp.querySelector("#" + id);
+        el.innerHTML = inner ? inner.innerHTML : sections[id];
+      }
+    }
+  }
+
+  /** Try to open the theme's native cart drawer or notification.
+   *  Returns true if a native element was found, false otherwise. */
+  function tryOpenNativeCart() {
+    // 1. Dawn cart-notification custom element
+    var cartNotificationEl = document.querySelector("cart-notification");
+    if (cartNotificationEl) {
+      if (typeof cartNotificationEl.open === "function") {
+        try { cartNotificationEl.open(); return true; } catch (_) {}
+      }
+      var inner = document.getElementById("cart-notification");
+      if (inner) {
+        inner.classList.add("animate", "active");
+        setTimeout(function () {
+          inner.classList.remove("active");
+          setTimeout(function () { inner.classList.remove("animate"); }, 400);
+        }, 5000);
+        return true;
+      }
+    }
+
+    // 2. Dawn cart-drawer (<details> based)
+    var cartDrawer = document.querySelector("cart-drawer");
+    if (cartDrawer) {
+      if (typeof cartDrawer.open === "function") {
+        try { cartDrawer.open(); return true; } catch (_) {}
+      }
+      var details = cartDrawer.querySelector("details");
+      if (details) { details.open = true; return true; }
+    }
+
+    // 3. Generic drawer: toggle common class names used by popular themes
+    var drawer = document.querySelector(
+      "#CartDrawer, .cart-drawer, .drawer--cart, .sidebar-cart, [data-cart-drawer]"
+    );
+    if (drawer) {
+      drawer.classList.add("active", "is-open", "open");
+      drawer.removeAttribute("hidden");
+      drawer.setAttribute("aria-hidden", "false");
+      return true;
+    }
+
+    return false;
+  }
+
+  // ─── Fallback toast notification ───
+
+  var _toastStyleInjected = false;
+  var _toastTimeout = null;
+
+  function injectToastStyles() {
+    if (_toastStyleInjected) return;
+    _toastStyleInjected = true;
+    var style = document.createElement("style");
+    style.textContent =
+      "@keyframes su-toast-in{from{transform:translate(-50%,-20px);opacity:0}to{transform:translate(-50%,0);opacity:1}}" +
+      "@keyframes su-toast-out{from{transform:translate(-50%,0);opacity:1}to{transform:translate(-50%,-20px);opacity:0}}" +
+      ".su-toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;" +
+        "background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);padding:16px 20px;" +
+        "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-width:280px;max-width:400px;" +
+        "animation:su-toast-in .3s ease}" +
+      ".su-toast.su-toast--closing{animation:su-toast-out .25s ease forwards}" +
+      ".su-toast-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}" +
+      ".su-toast-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#1a1a1a}" +
+      ".su-toast-check{width:20px;height:20px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center}" +
+      ".su-toast-close{background:none;border:none;font-size:20px;color:#888;cursor:pointer;padding:0 2px;line-height:1}" +
+      ".su-toast-close:hover{color:#333}" +
+      ".su-toast-actions{display:flex;gap:8px}" +
+      ".su-toast-btn{flex:1;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;text-align:center;" +
+        "text-decoration:none;cursor:pointer;transition:opacity .15s}" +
+      ".su-toast-btn:hover{opacity:.85}" +
+      ".su-toast-btn--outline{background:#fff;color:#1a1a1a;border:1px solid #d0d0d0}" +
+      ".su-toast-btn--primary{background:#1a1a1a;color:#fff;border:1px solid #1a1a1a}";
+    document.head.appendChild(style);
+  }
+
+  function showFallbackToast() {
+    injectToastStyles();
+
+    // Remove existing toast if any
+    var existing = document.querySelector(".su-toast");
+    if (existing) existing.remove();
+    if (_toastTimeout) { clearTimeout(_toastTimeout); _toastTimeout = null; }
+
+    var toast = document.createElement("div");
+    toast.className = "su-toast";
+    toast.innerHTML =
+      '<div class="su-toast-header">' +
+        '<span class="su-toast-title">' +
+          '<span class="su-toast-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          'Added to cart' +
+        '</span>' +
+        '<button class="su-toast-close" aria-label="Close">&times;</button>' +
+      '</div>' +
+      '<div class="su-toast-actions">' +
+        '<a href="/cart" class="su-toast-btn su-toast-btn--outline">View cart</a>' +
+        '<a href="/checkout" class="su-toast-btn su-toast-btn--primary">Check out</a>' +
+      '</div>';
+
+    document.body.appendChild(toast);
+
+    function close() {
+      toast.classList.add("su-toast--closing");
+      setTimeout(function () { toast.remove(); }, 250);
+      if (_toastTimeout) { clearTimeout(_toastTimeout); _toastTimeout = null; }
+    }
+
+    toast.querySelector(".su-toast-close").addEventListener("click", close);
+    _toastTimeout = setTimeout(close, 5000);
+  }
+
+  /** Open the theme's cart drawer/notification, or show our fallback toast. */
+  function openCartDrawer() {
+    if (!tryOpenNativeCart()) {
+      showFallbackToast();
+    }
+  }
+
+  /**
+   * After a successful /cart/add.js call, render the returned sections
+   * and open the cart drawer/notification so the user sees confirmation.
+   */
+  function renderSectionsAndOpenDrawer(res) {
+    if (isCartPage()) return; // cart page reloads instead
+    res.json().then(function (data) {
+      if (data && data.sections) {
+        renderSections(data.sections);
+      }
+      openCartDrawer();
+      patchCheckoutButtons();
+    }).catch(function () {
+      // Fallback: fetch sections separately if parsing fails
+      fetch("/?sections=" + CART_SECTIONS)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (sections) {
+          renderSections(sections);
+          openCartDrawer();
+          patchCheckoutButtons();
+        })
+        .catch(function () {});
+    });
+  }
+
   // ─── Add to cart ───
 
   function getWidget(btn) {
@@ -114,17 +282,14 @@
       var res = await fetch("/cart/add.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: items }),
+        body: JSON.stringify({ items: items, sections: CART_SECTIONS }),
       });
       _superupsellInternal = false;
 
       if (res.ok) {
-        // Track conversion
         trackEvent("conversion", widget, { variantId: variantId });
-
         btn.innerHTML = "\u2713 Added";
 
-        // On the cart page, reload so the cart table shows the new item
         if (isCartPage()) {
           setTimeout(function () { window.location.reload(); }, 600);
           return;
@@ -135,19 +300,7 @@
           btn.disabled = false;
         }, 1500);
 
-        // Refresh cart UI (drawer / icon)
-        try {
-          var cartRes = await fetch(
-            "/?sections=cart-drawer,cart-icon-bubble"
-          );
-          if (cartRes.ok) {
-            var sections = await cartRes.json();
-            for (var id in sections) {
-              var el = document.getElementById("shopify-section-" + id);
-              if (el) el.innerHTML = sections[id];
-            }
-          }
-        } catch (_) {}
+        renderSectionsAndOpenDrawer(res);
       } else {
         btn.innerHTML = "Error";
         setTimeout(function () {
@@ -190,7 +343,7 @@
       var res = await fetch("/cart/add.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: items }),
+        body: JSON.stringify({ items: items, sections: CART_SECTIONS }),
       });
       _superupsellInternal = false;
 
@@ -198,7 +351,6 @@
         trackEvent("conversion", widget);
         btn.textContent = "\u2713 Added";
 
-        // On the cart page, reload so the cart table shows the new items
         if (isCartPage()) {
           setTimeout(function () { window.location.reload(); }, 600);
           return;
@@ -209,16 +361,7 @@
           btn.disabled = false;
         }, 1500);
 
-        try {
-          var cartRes = await fetch("/?sections=cart-drawer,cart-icon-bubble");
-          if (cartRes.ok) {
-            var sections = await cartRes.json();
-            for (var id in sections) {
-              var el = document.getElementById("shopify-section-" + id);
-              if (el) el.innerHTML = sections[id];
-            }
-          }
-        } catch (_) {}
+        renderSectionsAndOpenDrawer(res);
       } else {
         btn.textContent = "Error";
         setTimeout(function () {
@@ -298,14 +441,11 @@
    * Also patches the checkout button to go straight to /checkout.
    */
   function refreshCartDrawer(originalFetch) {
-    originalFetch("/?sections=cart-drawer,cart-icon-bubble")
+    originalFetch("/?sections=" + CART_SECTIONS)
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (sections) {
-        if (!sections) return;
-        for (var id in sections) {
-          var el = document.getElementById("shopify-section-" + id);
-          if (el) el.innerHTML = sections[id];
-        }
+        renderSections(sections);
+        openCartDrawer();
         patchCheckoutButtons();
       })
       .catch(function () {});

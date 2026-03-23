@@ -1,0 +1,367 @@
+{% comment %}
+  ═══ SuperUpsell — Unified App Embed ═══
+  Auto-injects upsell widgets on product pages (inline + popup) and cart pages.
+  App blocks serve as fallback if this embed can't find an insertion point.
+{% endcomment %}
+
+{% comment %} ══════════════════════════════════════════
+   PRODUCT PAGE — inline widget + popup
+   ══════════════════════════════════════════ {% endcomment %}
+{% if template contains 'product' %}
+
+  {% comment %} ── Product Page Inline ── {% endcomment %}
+  {% assign pp_offer = shop.metafields["$app:superupsell"]["product_page"].value %}
+  {% if pp_offer and pp_offer.isActive %}
+    {% assign show_pp = false %}
+    {% if pp_offer.targetMode == 'all_products' %}
+      {% assign show_pp = true %}
+    {% elsif pp_offer.targetMode == 'specific_products' %}
+      {% for target in pp_offer.targets %}
+        {% assign tid = target.targetId | split: '/' | last | plus: 0 %}
+        {% if product.id == tid %}{% assign show_pp = true %}{% break %}{% endif %}
+      {% endfor %}
+    {% elsif pp_offer.targetMode == 'collections' %}
+      {% for col in product.collections %}
+        {% for target in pp_offer.targets %}
+          {% assign tid = target.targetId | split: '/' | last | plus: 0 %}
+          {% if col.id == tid %}{% assign show_pp = true %}{% break %}{% endif %}
+        {% endfor %}
+        {% if show_pp %}{% break %}{% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if show_pp %}
+      {% assign offer = pp_offer %}
+      {% assign radius = offer.cornerRadius | default: 8 %}
+      {% assign card_radius = radius | minus: 2 | at_least: 0 %}
+      {% assign img_radius = card_radius | minus: 2 | at_least: 0 %}
+
+      <div id="su-auto-pp" style="display:none;">
+        <div class="superupsell-widget" data-offer-id="{{ offer.id }}" data-surface="product_page" data-bundle-with-main="{{ offer.bundleWithMainProduct | default: false }}" data-main-variant-id="{{ product.selected_or_first_available_variant.id }}" style="background:{{ offer.backgroundColor | default: '#fff' }};border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ radius }}px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:16px 0;">
+          <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};margin-bottom:12px;">
+            {{ offer.titleText | default: 'You may also like' }}
+          </div>
+          {% if offer.discountLabel != blank and offer.discountPercentage > 0 %}
+            <div style="margin-bottom:10px;">
+              <span style="display:inline-block;background:#e53e3e;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">
+                {{ offer.discountLabel }} — {{ offer.discountPercentage }}% off
+              </span>
+            </div>
+          {% endif %}
+          {% if offer.layout == 'slider' %}<div class="superupsell-slider" style="position:relative;">{% else %}<div style="display:flex;flex-direction:column;gap:10px;">{% endif %}
+            {% for p in offer.products %}
+              {% assign prod = all_products[p.handle] %}
+              {% if prod and prod.available %}
+                {% assign original_price = prod.price %}
+                {% assign discount_amount = original_price | times: offer.discountPercentage | divided_by: 100 %}
+                {% assign discounted_price = original_price | minus: discount_amount %}
+                {% assign first_variant = prod.selected_or_first_available_variant %}
+                {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
+                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+                  {% if offer.cardMode == 'checkbox' %}
+                    <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
+                  {% endif %}
+                  {% if offer.showImage and prod.featured_image %}
+                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                  {% elsif offer.showImage %}
+                    <div style="width:64px;height:64px;min-width:64px;background:#f5f5f5;border-radius:{{ img_radius }}px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;">No img</div>
+                  {% endif %}
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prod.title }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                      <span style="font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};font-size:{{ offer.textSize | default: 14 | minus: 1 | at_least: 10 }}px;">{{ discounted_price | money }}</span>
+                      {% if offer.discountPercentage > 0 %}
+                        <span style="text-decoration:line-through;color:#999;font-size:{{ offer.textSize | default: 14 | minus: 2 | at_least: 10 }}px;">{{ original_price | money }}</span>
+                      {% endif %}
+                    </div>
+                    {% if offer.showVariants and prod.variants.size > 1 %}
+                      <select class="superupsell-variant-select" data-product-id="{{ prod.id }}" style="font-size:12px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-top:4px;max-width:120px;">
+                        {% for variant in prod.variants %}{% if variant.available %}<option value="{{ variant.id }}">{{ variant.title }}{% if variant.price != prod.price %} - {{ variant.price | money }}{% endif %}</option>{% endif %}{% endfor %}
+                      </select>
+                    {% endif %}
+                  </div>
+                  {% if offer.cardMode != 'checkbox' %}
+                    <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                      <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
+                      {{ offer.buttonText | default: 'Add' }}
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if offer.cardMode == 'checkbox' and offer.showButton != false %}
+            {% assign bulk_radius = radius | minus: 4 | at_least: 4 %}
+            <button class="superupsell-bulk-add" style="width:100%;margin-top:12px;background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ bulk_radius }}px;padding:10px 20px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:600;cursor:pointer;">
+              {{ offer.buttonText | default: 'Add to cart' }}
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% comment %} ── Popup ── {% endcomment %}
+  {% assign popup_offer = shop.metafields["$app:superupsell"]["popup"].value %}
+  {% if popup_offer and popup_offer.isActive %}
+    {% assign show_popup = false %}
+    {% if popup_offer.targetMode == 'all_products' %}
+      {% assign show_popup = true %}
+    {% elsif popup_offer.targetMode == 'specific_products' %}
+      {% for target in popup_offer.targets %}
+        {% assign tid = target.targetId | split: '/' | last | plus: 0 %}
+        {% if product.id == tid %}{% assign show_popup = true %}{% break %}{% endif %}
+      {% endfor %}
+    {% elsif popup_offer.targetMode == 'collections' %}
+      {% for col in product.collections %}
+        {% for target in popup_offer.targets %}
+          {% assign tid = target.targetId | split: '/' | last | plus: 0 %}
+          {% if col.id == tid %}{% assign show_popup = true %}{% break %}{% endif %}
+        {% endfor %}
+        {% if show_popup %}{% break %}{% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if show_popup %}
+      {% assign offer = popup_offer %}
+      {% assign radius = offer.cornerRadius | default: 8 %}
+      {% assign card_radius = radius | minus: 2 | at_least: 0 %}
+      {% assign img_radius = card_radius | minus: 2 | at_least: 0 %}
+
+      <div id="su-auto-popup" data-delay="{{ block.settings.popup_delay | default: 3 }}" data-offer-id="{{ offer.id }}" data-surface="popup" style="display:none;">
+        <div class="superupsell-popup-content" data-offer-id="{{ offer.id }}" data-surface="popup" data-bundle-with-main="{{ offer.bundleWithMainProduct | default: false }}" data-main-variant-id="{{ product.selected_or_first_available_variant.id }}" style="background:{{ offer.backgroundColor | default: '#fff' }};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">
+              {{ offer.titleText | default: 'You may also like' }}
+            </div>
+            <button class="superupsell-popup-close" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;padding:0 4px;">&times;</button>
+          </div>
+          {% if offer.discountLabel != blank and offer.discountPercentage > 0 %}
+            <div style="margin-bottom:10px;">
+              <span style="display:inline-block;background:#e53e3e;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">
+                {{ offer.discountLabel }} — {{ offer.discountPercentage }}% off
+              </span>
+            </div>
+          {% endif %}
+          {% if offer.layout == 'slider' %}<div class="superupsell-slider" style="position:relative;">{% else %}<div style="display:flex;flex-direction:column;gap:10px;">{% endif %}
+            {% for p in offer.products %}
+              {% assign prod = all_products[p.handle] %}
+              {% if prod and prod.available %}
+                {% assign original_price = prod.price %}
+                {% assign discount_amount = original_price | times: offer.discountPercentage | divided_by: 100 %}
+                {% assign discounted_price = original_price | minus: discount_amount %}
+                {% assign first_variant = prod.selected_or_first_available_variant %}
+                {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
+                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+                  {% if offer.cardMode == 'checkbox' %}
+                    <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
+                  {% endif %}
+                  {% if offer.showImage and prod.featured_image %}
+                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                  {% endif %}
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ prod.title }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                      <span style="font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ discounted_price | money }}</span>
+                      {% if offer.discountPercentage > 0 %}
+                        <span style="text-decoration:line-through;color:#999;">{{ original_price | money }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% if offer.cardMode != 'checkbox' %}
+                    <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                      <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
+                      {{ offer.buttonText | default: 'Add' }}
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if offer.cardMode == 'checkbox' and offer.showButton != false %}
+            {% assign bulk_radius = radius | minus: 4 | at_least: 4 %}
+            <button class="superupsell-bulk-add" style="width:100%;margin-top:12px;background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ bulk_radius }}px;padding:10px 20px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:600;cursor:pointer;">
+              {{ offer.buttonText | default: 'Add to cart' }}
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
+
+{% endif %}
+
+{% comment %} ══════════════════════════════════════════
+   CART PAGE
+   ══════════════════════════════════════════ {% endcomment %}
+{% if template == 'cart' %}
+  {% assign cart_offer = shop.metafields["$app:superupsell"]["cart"].value %}
+  {% if cart_offer and cart_offer.isActive %}
+    {% assign offer = cart_offer %}
+    {% assign radius = offer.cornerRadius | default: 8 %}
+    {% assign card_radius = radius | minus: 2 | at_least: 0 %}
+    {% assign img_radius = card_radius | minus: 2 | at_least: 0 %}
+
+    <div id="su-auto-cart" style="display:none;">
+      <div class="superupsell-widget" data-offer-id="{{ offer.id }}" data-surface="cart" data-bundle-with-main="{{ offer.bundleWithMainProduct | default: false }}" style="background:{{ offer.backgroundColor | default: '#fff' }};border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ radius }}px;padding:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0 0 16px;">
+        <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};margin-bottom:12px;">
+          {{ offer.titleText | default: 'You may also like' }}
+        </div>
+        {% if offer.discountLabel != blank and offer.discountPercentage > 0 %}
+          <div style="margin-bottom:10px;">
+            <span style="display:inline-block;background:#e53e3e;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;">
+              {{ offer.discountLabel }} — {{ offer.discountPercentage }}% off
+            </span>
+          </div>
+        {% endif %}
+        {% if offer.layout == 'slider' %}<div class="superupsell-slider" style="position:relative;">{% else %}<div style="display:flex;flex-direction:column;gap:10px;">{% endif %}
+          {% for p in offer.products %}
+            {% assign prod = all_products[p.handle] %}
+            {% if prod and prod.available %}
+              {% assign original_price = prod.price %}
+              {% assign discount_amount = original_price | times: offer.discountPercentage | divided_by: 100 %}
+              {% assign discounted_price = original_price | minus: discount_amount %}
+              {% assign first_variant = prod.selected_or_first_available_variant %}
+              {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
+              <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+                {% if offer.cardMode == 'checkbox' %}
+                  <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
+                {% endif %}
+                {% if offer.showImage and prod.featured_image %}
+                  <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                {% endif %}
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prod.title }}</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                    <span style="font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ discounted_price | money }}</span>
+                    {% if offer.discountPercentage > 0 %}
+                      <span style="text-decoration:line-through;color:#999;">{{ original_price | money }}</span>
+                    {% endif %}
+                  </div>
+                  {% if offer.showVariants and prod.variants.size > 1 %}
+                    <select class="superupsell-variant-select" data-product-id="{{ prod.id }}" style="font-size:12px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-top:4px;max-width:120px;">
+                      {% for variant in prod.variants %}{% if variant.available %}<option value="{{ variant.id }}">{{ variant.title }}</option>{% endif %}{% endfor %}
+                    </select>
+                  {% endif %}
+                </div>
+                {% if offer.cardMode != 'checkbox' %}
+                  <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                    <span style="font-size:{{ offer.buttonSize | default: 14 | plus: 2 }}px;line-height:1;">+</span>
+                    {{ offer.buttonText | default: 'Add' }}
+                  </button>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% if offer.cardMode == 'checkbox' and offer.showButton != false %}
+          {% assign bulk_radius = radius | minus: 4 | at_least: 4 %}
+          <button class="superupsell-bulk-add" style="width:100%;margin-top:12px;background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ bulk_radius }}px;padding:10px 20px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:600;cursor:pointer;">
+            {{ offer.buttonText | default: 'Add to cart' }}
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+
+{% comment %} ══════════════════════════════════════════
+   POSITIONING SCRIPT — runs synchronously BEFORE superupsell.js (defer)
+   ══════════════════════════════════════════ {% endcomment %}
+<script>
+(function(){
+  /* Check if a block-placed widget already exists for a given surface */
+  function hasBlock(surface, container) {
+    var all = document.querySelectorAll('.superupsell-widget[data-surface="' + surface + '"]');
+    for (var i = 0; i < all.length; i++) {
+      if (!container.contains(all[i])) return true;
+    }
+    return false;
+  }
+
+  /* Move a widget from its hidden container into the page */
+  function inject(container, ref, position) {
+    var widget = container.firstElementChild;
+    if (!widget) return;
+    container.removeChild(widget);
+    container.remove();
+    ref.insertAdjacentElement(position, widget);
+  }
+
+  /* ── Product page widget ── */
+  var pp = document.getElementById('su-auto-pp');
+  if (pp) {
+    if (hasBlock('product_page', pp)) {
+      pp.remove();
+    } else {
+      var ppRef =
+        document.querySelector('product-form') ||
+        document.querySelector('form[action*="/cart/add"]') ||
+        document.querySelector('.product__info-wrapper') ||
+        document.querySelector('.product-single__meta') ||
+        document.querySelector('.product__meta');
+      if (ppRef) {
+        inject(pp, ppRef, 'afterend');
+      } else {
+        /* Can't find product form — show in place as last resort */
+        pp.style.display = '';
+      }
+    }
+  }
+
+  /* ── Popup ── */
+  var popup = document.getElementById('su-auto-popup');
+  if (popup) {
+    /* If the standalone popup embed already rendered, skip ours */
+    if (document.getElementById('superupsell-popup-data')) {
+      popup.remove();
+    } else {
+      /* Rename so initPopup() in superupsell.js picks it up */
+      popup.id = 'superupsell-popup-data';
+    }
+  }
+
+  /* ── Cart widget ── */
+  var cart = document.getElementById('su-auto-cart');
+  if (cart) {
+    if (hasBlock('cart', cart)) {
+      cart.remove();
+    } else {
+      var cartRef =
+        document.querySelector('cart-items') ||
+        document.querySelector('.cart__contents') ||
+        document.querySelector('.cart__items') ||
+        document.querySelector('form[action="/cart"]') ||
+        document.querySelector('.cart') ||
+        document.querySelector('#cart') ||
+        document.querySelector('#MainContent main') ||
+        document.querySelector('#MainContent') ||
+        document.querySelector('main');
+      if (cartRef) {
+        inject(cart, cartRef, 'beforebegin');
+      } else {
+        cart.style.display = '';
+      }
+    }
+  }
+})();
+</script>
+<script src="{{ 'superupsell.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "SuperUpsell (auto)",
+  "target": "body",
+  "settings": [
+    {
+      "type": "range",
+      "id": "popup_delay",
+      "label": "Popup delay (seconds)",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 3
+    }
+  ]
+}
+{% endschema %}

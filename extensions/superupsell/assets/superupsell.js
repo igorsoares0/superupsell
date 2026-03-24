@@ -376,9 +376,68 @@
     }
   }
 
+  // ─── Instant add on checkbox (when no bulk button) ───
+
+  async function handleCheckboxInstantAdd(cb) {
+    var variantId = cb.dataset.variantId;
+    if (!variantId) return;
+
+    var card = cb.closest(".superupsell-card");
+    var widget = cb.closest("[data-offer-id]");
+
+    cb.disabled = true;
+    if (card) card.style.opacity = "0.6";
+
+    trackEvent("click", widget, { variantId: variantId });
+
+    try {
+      var items = [{ id: parseInt(variantId, 10), quantity: 1 }];
+      if (shouldBundleWithMain(widget)) {
+        var mainVid = getMainVariantId(widget);
+        if (mainVid) items.unshift({ id: mainVid, quantity: 1 });
+      }
+
+      _superupsellInternal = true;
+      var res = await fetch("/cart/add.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items, sections: CART_SECTIONS }),
+      });
+      _superupsellInternal = false;
+
+      if (res.ok) {
+        trackEvent("conversion", widget, { variantId: variantId });
+
+        if (isCartPage()) {
+          setTimeout(function () { window.location.reload(); }, 600);
+          return;
+        }
+
+        if (card) card.style.opacity = "1";
+        setTimeout(function () {
+          cb.checked = false;
+          cb.disabled = false;
+        }, 1500);
+
+        renderSectionsAndOpenDrawer(res);
+      } else {
+        cb.checked = false;
+        cb.disabled = false;
+        if (card) card.style.opacity = "1";
+      }
+    } catch (_) {
+      _superupsellInternal = false;
+      cb.checked = false;
+      cb.disabled = false;
+      if (card) card.style.opacity = "1";
+    }
+  }
+
   // ─── Checkbox card click (toggle checkbox when clicking anywhere on card) ───
 
   function bindCheckboxCards(container) {
+    var hasBulkBtn = !!container.querySelector(".superupsell-bulk-add");
+
     container.querySelectorAll(".superupsell-card").forEach(function (card) {
       var cb = card.querySelector(".superupsell-checkbox");
       if (!cb) return;
@@ -387,7 +446,20 @@
         // Don't toggle if clicking checkbox itself or variant select
         if (e.target === cb || e.target.closest(".superupsell-variant-select")) return;
         cb.checked = !cb.checked;
+        // Instant add when no bulk button exists
+        if (!hasBulkBtn && cb.checked) {
+          handleCheckboxInstantAdd(cb);
+        }
       });
+
+      // Direct checkbox clicks (native toggle already happened)
+      if (!hasBulkBtn) {
+        cb.addEventListener("change", function () {
+          if (cb.checked) {
+            handleCheckboxInstantAdd(cb);
+          }
+        });
+      }
     });
 
     var bulkBtns = container.querySelectorAll(".superupsell-bulk-add");

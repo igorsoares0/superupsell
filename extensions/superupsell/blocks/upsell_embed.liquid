@@ -301,7 +301,7 @@
         document.querySelector('.product-single__meta') ||
         document.querySelector('.product__meta');
       if (ppRef) {
-        inject(pp, ppRef, 'afterend');
+        inject(pp, ppRef, 'beforebegin');
       } else {
         /* Can't find product form — show in place as last resort */
         pp.style.display = '';

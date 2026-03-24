@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "DailyMetric" ADD COLUMN "clicks" INTEGER NOT NULL DEFAULT 0;

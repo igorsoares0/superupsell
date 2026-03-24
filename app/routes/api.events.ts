@@ -43,6 +43,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!VALID_SURFACES.includes(surface)) continue;
     if (!offerId) continue;
 
+    const amount = evt.amount ? parseFloat(evt.amount) : null;
+
     // Write raw event
     await prisma.analyticsEvent.create({
       data: {
@@ -50,7 +52,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         offerId,
         surface,
         eventType,
-        metadata: evt.productId
+        amount: amount && !isNaN(amount) ? amount : undefined,
+        metadata: evt.productId || evt.variantId
           ? { productId: evt.productId, variantId: evt.variantId }
           : undefined,
       },
@@ -60,23 +63,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    if (eventType === "impression" || eventType === "conversion") {
-      await prisma.dailyMetric.upsert({
-        where: { shop_surface_day: { shop, surface, day: today } },
-        update:
-          eventType === "impression"
-            ? { impressions: { increment: 1 } }
-            : { conversions: { increment: 1 } },
-        create: {
-          shop,
-          surface,
-          day: today,
-          impressions: eventType === "impression" ? 1 : 0,
-          conversions: eventType === "conversion" ? 1 : 0,
-          revenue: 0,
-        },
-      });
-    }
+    const revenueIncrement =
+      eventType === "conversion" && amount && !isNaN(amount) && amount > 0
+        ? amount
+        : 0;
+
+    await prisma.dailyMetric.upsert({
+      where: { shop_surface_day: { shop, surface, day: today } },
+      update:
+        eventType === "impression"
+          ? { impressions: { increment: 1 } }
+          : eventType === "click"
+          ? { clicks: { increment: 1 } }
+          : { conversions: { increment: 1 }, revenue: { increment: revenueIncrement } },
+      create: {
+        shop,
+        surface,
+        day: today,
+        impressions: eventType === "impression" ? 1 : 0,
+        clicks: eventType === "click" ? 1 : 0,
+        conversions: eventType === "conversion" ? 1 : 0,
+        revenue: revenueIncrement,
+      },
+    });
   }
 
   return Response.json({ ok: true });

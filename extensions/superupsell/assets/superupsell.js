@@ -23,6 +23,7 @@
     if (extra) {
       if (extra.productId) payload.productId = extra.productId;
       if (extra.variantId) payload.variantId = extra.variantId;
+      if (extra.amount) payload.amount = extra.amount;
     }
 
     var json = JSON.stringify(payload);
@@ -72,6 +73,13 @@
   function shouldBundleWithMain(widget) {
     if (!widget) return false;
     return widget.dataset.bundleWithMain === "true";
+  }
+
+  function getCardPrice(el) {
+    var card = el.closest(".superupsell-card");
+    if (!card) return 0;
+    var p = parseInt(card.dataset.price || "0", 10);
+    return isNaN(p) ? 0 : p / 100;
   }
 
   function getMainVariantId(widget) {
@@ -287,7 +295,8 @@
       _superupsellInternal = false;
 
       if (res.ok) {
-        trackEvent("conversion", widget, { variantId: variantId });
+        var amount = getCardPrice(btn);
+        trackEvent("conversion", widget, { variantId: variantId, amount: amount });
         btn.innerHTML = "\u2713 Added";
 
         if (isCartPage()) {
@@ -326,9 +335,15 @@
     if (checkboxes.length === 0) return;
 
     var items = [];
+    var variantIds = [];
+    var totalAmount = 0;
     checkboxes.forEach(function (cb) {
       var vid = cb.dataset.variantId;
-      if (vid) items.push({ id: parseInt(vid, 10), quantity: 1 });
+      if (vid) {
+        items.push({ id: parseInt(vid, 10), quantity: 1 });
+        variantIds.push(vid);
+        totalAmount += getCardPrice(cb);
+      }
     });
     if (items.length === 0) return;
 
@@ -336,7 +351,7 @@
     btn.textContent = "Adding\u2026";
     btn.disabled = true;
 
-    trackEvent("click", widget);
+    trackEvent("click", widget, { variantId: variantIds.join(",") });
 
     try {
       _superupsellInternal = true;
@@ -348,7 +363,7 @@
       _superupsellInternal = false;
 
       if (res.ok) {
-        trackEvent("conversion", widget);
+        trackEvent("conversion", widget, { variantId: variantIds.join(","), amount: totalAmount });
         btn.textContent = "\u2713 Added";
 
         if (isCartPage()) {
@@ -406,7 +421,8 @@
       _superupsellInternal = false;
 
       if (res.ok) {
-        trackEvent("conversion", widget, { variantId: variantId });
+        var amount = getCardPrice(cb);
+        trackEvent("conversion", widget, { variantId: variantId, amount: amount });
 
         if (isCartPage()) {
           setTimeout(function () { window.location.reload(); }, 600);
@@ -498,12 +514,20 @@
 
   function getCheckedUpsellItems() {
     var items = [];
+    var totalPrice = 0;
+    var variantIds = [];
     _interceptWidgets.forEach(function (widget) {
       widget.querySelectorAll(".superupsell-checkbox:checked").forEach(function (cb) {
         var normalized = normalizeVariantId(cb.dataset.variantId);
-        if (normalized) items.push({ id: normalized, quantity: 1 });
+        if (normalized) {
+          items.push({ id: normalized, quantity: 1 });
+          variantIds.push(String(normalized));
+          totalPrice += getCardPrice(cb);
+        }
       });
     });
+    items._totalPrice = totalPrice;
+    items._variantIds = variantIds;
     return items;
   }
 
@@ -564,7 +588,9 @@
       var upsellItems = getCheckedUpsellItems();
       if (upsellItems.length === 0) return originalFetch.apply(this, arguments);
 
-      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+      var upsellVids = upsellItems._variantIds.join(",");
+      var upsellAmount = upsellItems._totalPrice;
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: upsellVids }); });
 
       // Let the theme's original request go through untouched
       return originalFetch.apply(this, arguments).then(function (res) {
@@ -582,7 +608,7 @@
         }).then(function (upsellRes) {
           _superupsellInternal = false;
           if (upsellRes && upsellRes.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: upsellVids, amount: upsellAmount }); });
             // Refresh the cart drawer so it shows ALL items and checkout works
             refreshCartDrawer(originalFetch);
           }
@@ -610,7 +636,9 @@
       ) {
         var upsellItems = getCheckedUpsellItems();
         if (upsellItems.length > 0) {
-          _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+          var xhrVids = upsellItems._variantIds.join(",");
+          var xhrAmount = upsellItems._totalPrice;
+          _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: xhrVids }); });
           var self = this;
           this.addEventListener("load", function () {
             if (!(self.status >= 200 && self.status < 300)) return;
@@ -622,7 +650,7 @@
             }).then(function (upsellRes) {
               _superupsellInternal = false;
               if (upsellRes && upsellRes.ok) {
-                _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+                _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: xhrVids, amount: xhrAmount }); });
                 refreshCartDrawer(originalFetch);
               }
             }).catch(function () { _superupsellInternal = false; });
@@ -642,13 +670,15 @@
 
       e.preventDefault();
 
+      var formVids = upsellItems._variantIds.join(",");
+      var formAmount = upsellItems._totalPrice;
       var items = [];
       var formData = new FormData(form);
       var normalizedFormId = normalizeVariantId(formData.get("id"));
       if (normalizedFormId) items.push({ id: normalizedFormId, quantity: parseInt(formData.get("quantity") || "1", 10) });
       items = items.concat(upsellItems);
 
-      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: formVids }); });
 
       _superupsellInternal = true;
       originalFetch("/cart/add.js", {
@@ -659,7 +689,7 @@
         .then(function (res) {
           _superupsellInternal = false;
           if (res.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: formVids, amount: formAmount }); });
             window.location.href = "/cart";
           } else {
             form.submit();
@@ -686,6 +716,8 @@
       e.preventDefault();
       e.stopImmediatePropagation();
 
+      var buyVids = upsellItems._variantIds.join(",");
+      var buyAmount = upsellItems._totalPrice;
       var variantInput = document.querySelector(
         "form[action*='/cart/add'] [name='id'], product-form [name='id'], .product-form [name='id']"
       );
@@ -700,7 +732,7 @@
         });
       }
 
-      _interceptWidgets.forEach(function (w) { trackEvent("click", w); });
+      _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: buyVids }); });
 
       _superupsellInternal = true;
       originalFetch("/cart/add.js", {
@@ -711,7 +743,7 @@
         .then(function (res) {
           _superupsellInternal = false;
           if (res.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w); });
+            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: buyVids, amount: buyAmount }); });
             window.location.href = "/checkout";
           }
         })

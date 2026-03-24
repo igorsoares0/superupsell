@@ -44,10 +44,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Totals
   const agg = await prisma.dailyMetric.aggregate({
     where: { shop: session.shop, day: { gte: startDate }, ...surfaceFilter },
-    _sum: { impressions: true, conversions: true, revenue: true },
+    _sum: { impressions: true, clicks: true, conversions: true, revenue: true },
   });
 
   const impressions = agg._sum.impressions ?? 0;
+  const clicks = agg._sum.clicks ?? 0;
   const conversions = agg._sum.conversions ?? 0;
   const revenue = Number(agg._sum.revenue ?? 0);
   const conversionRate =
@@ -57,12 +58,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const bySurface = await prisma.dailyMetric.groupBy({
     by: ["surface"],
     where: { shop: session.shop, day: { gte: startDate }, ...surfaceFilter },
-    _sum: { impressions: true, conversions: true, revenue: true },
+    _sum: { impressions: true, clicks: true, conversions: true, revenue: true },
   });
 
   const surfaceBreakdown = bySurface.map((row) => ({
     surface: row.surface,
     impressions: row._sum.impressions ?? 0,
+    clicks: row._sum.clicks ?? 0,
     conversions: row._sum.conversions ?? 0,
     revenue: Number(row._sum.revenue ?? 0),
   }));
@@ -75,11 +77,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   // Group by day (sum across surfaces)
-  const dayMap = new Map<string, { impressions: number; conversions: number; revenue: number }>();
+  const dayMap = new Map<string, { impressions: number; clicks: number; conversions: number; revenue: number }>();
   for (const row of dailyRows) {
     const key = new Date(row.day).toISOString().split("T")[0];
-    const existing = dayMap.get(key) || { impressions: 0, conversions: 0, revenue: 0 };
+    const existing = dayMap.get(key) || { impressions: 0, clicks: 0, conversions: 0, revenue: 0 };
     existing.impressions += row.impressions;
+    existing.clicks += row.clicks;
     existing.conversions += row.conversions;
     existing.revenue += Number(row.revenue);
     dayMap.set(key, existing);
@@ -91,7 +94,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return {
     period,
     surface: surfaceParam,
-    totals: { impressions, conversions, conversionRate, revenue },
+    totals: { impressions, clicks, conversions, conversionRate, revenue },
     surfaceBreakdown,
     dailyTrend,
   };
@@ -177,8 +180,9 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       <div style={{ marginTop: "16px" }} />
-      <s-grid gridTemplateColumns="1fr 1fr 1fr 1fr" gap="base">
+      <s-grid gridTemplateColumns="1fr 1fr 1fr 1fr 1fr" gap="base">
         <KpiCard title="Impressions" value={totals.impressions.toLocaleString()} />
+        <KpiCard title="Clicks" value={totals.clicks.toLocaleString()} />
         <KpiCard title="Conversions" value={totals.conversions.toLocaleString()} />
         <KpiCard title="Conv. Rate" value={`${totals.conversionRate}%`} />
         <KpiCard title="Revenue" value={`$${totals.revenue.toFixed(2)}`} />
@@ -194,6 +198,7 @@ export default function Analytics() {
                 <s-table-header-row>
                   <s-table-header>Surface</s-table-header>
                   <s-table-header>Impressions</s-table-header>
+                  <s-table-header>Clicks</s-table-header>
                   <s-table-header>Conversions</s-table-header>
                   <s-table-header>Conv. Rate</s-table-header>
                   <s-table-header>Revenue</s-table-header>
@@ -210,6 +215,7 @@ export default function Analytics() {
                           <s-badge>{SURFACE_LABELS[row.surface] || row.surface}</s-badge>
                         </s-table-cell>
                         <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
                         <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
                         <s-table-cell>{rate}%</s-table-cell>
                         <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
@@ -233,6 +239,7 @@ export default function Analytics() {
                 <s-table-header-row>
                   <s-table-header>Date</s-table-header>
                   <s-table-header>Impressions</s-table-header>
+                  <s-table-header>Clicks</s-table-header>
                   <s-table-header>Conversions</s-table-header>
                   <s-table-header>Conv. Rate</s-table-header>
                   <s-table-header>Revenue</s-table-header>
@@ -247,6 +254,7 @@ export default function Analytics() {
                       <s-table-row key={row.day}>
                         <s-table-cell>{row.day}</s-table-cell>
                         <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                        <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
                         <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
                         <s-table-cell>{rate}%</s-table-cell>
                         <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>

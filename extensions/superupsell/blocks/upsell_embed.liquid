@@ -57,7 +57,7 @@
                 {% assign discounted_price = original_price | minus: discount_amount %}
                 {% assign first_variant = prod.selected_or_first_available_variant %}
                 {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
-                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" data-price="{{ discounted_price }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
                   {% if offer.cardMode == 'checkbox' %}
                     <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                   {% endif %}
@@ -152,7 +152,7 @@
                 {% assign discounted_price = original_price | minus: discount_amount %}
                 {% assign first_variant = prod.selected_or_first_available_variant %}
                 {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
-                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+                <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" data-price="{{ discounted_price }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
                   {% if offer.cardMode == 'checkbox' %}
                     <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                   {% endif %}
@@ -223,7 +223,7 @@
               {% assign discounted_price = original_price | minus: discount_amount %}
               {% assign first_variant = prod.selected_or_first_available_variant %}
               {% assign btn_radius = card_radius | minus: 2 | at_least: 2 %}
-              <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
+              <div class="superupsell-card" data-variant-id="{{ first_variant.id }}" data-price="{{ discounted_price }}" style="display:flex;align-items:center;gap:12px;border:1px solid {{ offer.borderColor | default: '#E0E0E0' }};border-radius:{{ card_radius }}px;padding:10px 12px;background:#fff;{% if offer.cardMode == 'checkbox' %}cursor:pointer;{% endif %}">
                 {% if offer.cardMode == 'checkbox' %}
                   <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                 {% endif %}

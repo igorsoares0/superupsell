@@ -161,6 +161,7 @@ model DailyMetric {
   surface     Surface
   day         DateTime @db.Date
   impressions Int      @default(0)
+  clicks      Int      @default(0)
   conversions Int      @default(0)
   revenue     Decimal  @default(0) @db.Decimal(12, 2)
 

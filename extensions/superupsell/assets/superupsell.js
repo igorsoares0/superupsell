@@ -753,18 +753,22 @@
     var dataEl = document.getElementById("superupsell-popup-data");
     if (!dataEl) return;
 
-    var delay = parseInt(dataEl.dataset.delay || "3", 10) * 1000;
     var content = dataEl.querySelector(".superupsell-popup-content");
     if (!content) return;
 
-    setTimeout(function () {
+    var popupShown = false;
+
+    function showPopup() {
+      if (popupShown) return;
+      popupShown = true;
+
       var overlay = document.createElement("div");
       overlay.style.cssText =
         "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9998;opacity:0;transition:opacity .3s;";
 
       var popup = document.createElement("div");
       popup.style.cssText =
-        "position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:20px;border-radius:12px 12px 0 0;transform:translateY(100%);transition:transform .3s ease;max-height:60vh;overflow-y:auto;box-shadow:0 -4px 20px rgba(0,0,0,0.15);";
+        "position:fixed;top:50%;left:50%;z-index:9999;padding:24px;border-radius:16px;transform:translate(-50%,-50%) scale(0.9);opacity:0;transition:transform .3s ease,opacity .3s ease;width:92%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);box-sizing:border-box;";
 
       popup.appendChild(content.cloneNode(true));
       document.body.appendChild(overlay);
@@ -775,17 +779,18 @@
 
       requestAnimationFrame(function () {
         overlay.style.opacity = "1";
-        popup.style.transform = "translateY(0)";
+        popup.style.transform = "translate(-50%,-50%) scale(1)";
+        popup.style.opacity = "1";
       });
 
-      // Track popup impression
       var popupContent = popup.querySelector("[data-offer-id]");
       if (popupContent) {
         trackEvent("impression", popupContent);
       }
 
       function close() {
-        popup.style.transform = "translateY(100%)";
+        popup.style.transform = "translate(-50%,-50%) scale(0.9)";
+        popup.style.opacity = "0";
         overlay.style.opacity = "0";
         setTimeout(function () {
           popup.remove();
@@ -796,7 +801,26 @@
       overlay.addEventListener("click", close);
       var closeBtn = popup.querySelector(".superupsell-popup-close");
       if (closeBtn) closeBtn.addEventListener("click", close);
-    }, delay);
+    }
+
+    // Show popup after a successful NATIVE add-to-cart (skip our own calls)
+    var _popupPrevFetch = window.fetch;
+    window.fetch = function (url, options) {
+      if (_superupsellInternal) return _popupPrevFetch.apply(this, arguments);
+
+      var urlStr = typeof url === "string" ? url : (url instanceof Request ? url.url : "");
+      if (urlStr.indexOf("/cart/add") === -1) return _popupPrevFetch.apply(this, arguments);
+
+      var method = (options && options.method) ? options.method.toUpperCase() : (url instanceof Request ? url.method.toUpperCase() : "GET");
+      if (method !== "POST") return _popupPrevFetch.apply(this, arguments);
+
+      return _popupPrevFetch.apply(this, arguments).then(function (res) {
+        if (res.ok && !popupShown) {
+          setTimeout(showPopup, 500);
+        }
+        return res;
+      });
+    };
   }
 
   // ─── Slider arrows ───

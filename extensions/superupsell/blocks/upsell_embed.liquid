@@ -128,7 +128,7 @@
       {% assign card_radius = radius | minus: 2 | at_least: 0 %}
       {% assign img_radius = card_radius | minus: 2 | at_least: 0 %}
 
-      <div id="su-auto-popup" data-delay="{{ block.settings.popup_delay | default: 3 }}" data-offer-id="{{ offer.id }}" data-surface="popup" style="display:none;">
+      <div id="su-auto-popup" data-offer-id="{{ offer.id }}" data-surface="popup" style="display:none;">
         <div class="superupsell-popup-content" data-offer-id="{{ offer.id }}" data-surface="popup" data-bundle-with-main="{{ offer.bundleWithMainProduct | default: false }}" data-main-variant-id="{{ product.selected_or_first_available_variant.id }}" style="background:{{ offer.backgroundColor | default: '#fff' }};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div style="font-size:{{ offer.titleSize | default: 18 }}px;font-weight:600;color:{{ offer.textColor | default: '#1A1A1A' }};">
@@ -352,16 +352,6 @@
 {
   "name": "SuperUpsell (auto)",
   "target": "body",
-  "settings": [
-    {
-      "type": "range",
-      "id": "popup_delay",
-      "label": "Popup delay (seconds)",
-      "min": 0,
-      "max": 30,
-      "step": 1,
-      "default": 3
-    }
-  ]
+  "settings": []
 }
 {% endschema %}

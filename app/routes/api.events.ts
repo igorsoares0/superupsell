@@ -2,7 +2,7 @@ import type { ActionFunctionArgs } from "react-router";
 import prisma from "../db.server";
 import type { Surface, EventType } from "@prisma/client";
 
-const VALID_EVENTS: EventType[] = ["impression", "click", "conversion"];
+const VALID_EVENTS: EventType[] = ["impression", "click", "add_to_cart", "conversion"];
 const VALID_SURFACES: Surface[] = [
   "product_page",
   "popup",
@@ -63,27 +63,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    const revenueIncrement =
-      eventType === "conversion" && amount && !isNaN(amount) && amount > 0
-        ? amount
-        : 0;
+    const updateField =
+      eventType === "impression"
+        ? { impressions: { increment: 1 } }
+        : eventType === "click"
+        ? { clicks: { increment: 1 } }
+        : eventType === "add_to_cart"
+        ? { addToCarts: { increment: 1 } }
+        : // conversion — only from webhooks, includes revenue
+          {
+            conversions: { increment: 1 },
+            revenue: {
+              increment:
+                amount && !isNaN(amount) && amount > 0 ? amount : 0,
+            },
+          };
 
     await prisma.dailyMetric.upsert({
       where: { shop_surface_day: { shop, surface, day: today } },
-      update:
-        eventType === "impression"
-          ? { impressions: { increment: 1 } }
-          : eventType === "click"
-          ? { clicks: { increment: 1 } }
-          : { conversions: { increment: 1 }, revenue: { increment: revenueIncrement } },
+      update: updateField,
       create: {
         shop,
         surface,
         day: today,
         impressions: eventType === "impression" ? 1 : 0,
         clicks: eventType === "click" ? 1 : 0,
+        addToCarts: eventType === "add_to_cart" ? 1 : 0,
         conversions: eventType === "conversion" ? 1 : 0,
-        revenue: revenueIncrement,
+        revenue:
+          eventType === "conversion" && amount && !isNaN(amount) && amount > 0
+            ? amount
+            : 0,
       },
     });
   }

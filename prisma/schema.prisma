@@ -56,6 +56,7 @@ enum CardMode {
 enum EventType {
   impression
   click
+  add_to_cart
   conversion
   revenue
 }
@@ -162,6 +163,7 @@ model DailyMetric {
   day         DateTime @db.Date
   impressions Int      @default(0)
   clicks      Int      @default(0)
+  addToCarts  Int      @default(0)
   conversions Int      @default(0)
   revenue     Decimal  @default(0) @db.Decimal(12, 2)
 

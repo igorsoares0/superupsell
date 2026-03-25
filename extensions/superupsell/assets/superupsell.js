@@ -296,7 +296,7 @@
 
       if (res.ok) {
         var amount = getCardPrice(btn);
-        trackEvent("conversion", widget, { variantId: variantId, amount: amount });
+        trackEvent("add_to_cart", widget, { variantId: variantId, amount: amount });
         btn.innerHTML = "\u2713 Added";
 
         if (isCartPage()) {
@@ -363,7 +363,7 @@
       _superupsellInternal = false;
 
       if (res.ok) {
-        trackEvent("conversion", widget, { variantId: variantIds.join(","), amount: totalAmount });
+        trackEvent("add_to_cart", widget, { variantId: variantIds.join(","), amount: totalAmount });
         btn.textContent = "\u2713 Added";
 
         if (isCartPage()) {
@@ -422,7 +422,7 @@
 
       if (res.ok) {
         var amount = getCardPrice(cb);
-        trackEvent("conversion", widget, { variantId: variantId, amount: amount });
+        trackEvent("add_to_cart", widget, { variantId: variantId, amount: amount });
 
         if (isCartPage()) {
           setTimeout(function () { window.location.reload(); }, 600);
@@ -608,7 +608,7 @@
         }).then(function (upsellRes) {
           _superupsellInternal = false;
           if (upsellRes && upsellRes.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: upsellVids, amount: upsellAmount }); });
+            _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: upsellVids, amount: upsellAmount }); });
             // Refresh the cart drawer so it shows ALL items and checkout works
             refreshCartDrawer(originalFetch);
           }
@@ -650,7 +650,7 @@
             }).then(function (upsellRes) {
               _superupsellInternal = false;
               if (upsellRes && upsellRes.ok) {
-                _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: xhrVids, amount: xhrAmount }); });
+                _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: xhrVids, amount: xhrAmount }); });
                 refreshCartDrawer(originalFetch);
               }
             }).catch(function () { _superupsellInternal = false; });
@@ -689,7 +689,7 @@
         .then(function (res) {
           _superupsellInternal = false;
           if (res.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: formVids, amount: formAmount }); });
+            _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: formVids, amount: formAmount }); });
             window.location.href = "/cart";
           } else {
             form.submit();
@@ -743,7 +743,7 @@
         .then(function (res) {
           _superupsellInternal = false;
           if (res.ok) {
-            _interceptWidgets.forEach(function (w) { trackEvent("conversion", w, { variantId: buyVids, amount: buyAmount }); });
+            _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: buyVids, amount: buyAmount }); });
             window.location.href = "/checkout";
           }
         })

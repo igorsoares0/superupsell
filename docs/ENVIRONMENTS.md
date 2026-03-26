@@ -54,7 +54,7 @@ Configurar no dashboard da Vercel (Settings → Environment Variables):
 | `DATABASE_URL`     | Connection string do Neon (prod)       |
 | `SHOPIFY_API_KEY`  | `client_id` do app prod                |
 | `SHOPIFY_API_SECRET` | API secret do app prod (Partner Dashboard) |
-| `SCOPES`           | `write_products,write_discounts`       |
+| `SCOPES`           | `write_products,write_discounts,read_orders` |
 | `SHOPIFY_APP_URL`  | URL da Vercel (ex: `https://superupsell.vercel.app`) |
 
 ### Deploy

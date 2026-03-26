@@ -3,7 +3,7 @@
 # TODO: Replace with your production app's client_id from Shopify Partner Dashboard
 client_id = "2195b1a88a0850d56db2bb1d7e3f1f94"
 name = "superupsell"
-application_url = "https://example.com"
+application_url = "https://superupsell.vercel.app"
 embedded = true
 
 [build]
@@ -28,9 +28,9 @@ api_version = "2026-04"
 scopes = "write_products,write_discounts,read_orders"
 
 [app_proxy]
-url = "https://example.com/api"
+url = "https://superupsell.vercel.app/api"
 subpath = "superupsell"
 prefix = "apps"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://superupsell.vercel.app/api/auth" ]

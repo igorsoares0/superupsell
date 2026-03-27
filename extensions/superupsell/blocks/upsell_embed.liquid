@@ -167,6 +167,11 @@
                         <span style="text-decoration:line-through;color:#999;">{{ original_price | money }}</span>
                       {% endif %}
                     </div>
+                    {% if offer.showVariants and prod.variants.size > 1 %}
+                      <select class="superupsell-variant-select" data-product-id="{{ prod.id }}" style="font-size:12px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-top:4px;max-width:120px;">
+                        {% for variant in prod.variants %}{% if variant.available %}<option value="{{ variant.id }}">{{ variant.title }}{% if variant.price != prod.price %} - {{ variant.price | money }}{% endif %}</option>{% endif %}{% endfor %}
+                      </select>
+                    {% endif %}
                   </div>
                   {% if offer.cardMode != 'checkbox' %}
                     <button class="superupsell-add-btn" data-variant-id="{{ first_variant.id }}" style="background:{{ offer.buttonColor | default: '#000' }};color:{{ offer.buttonTextColor | default: '#fff' }};border:none;border-radius:{{ btn_radius }}px;padding:8px 14px;font-size:{{ offer.buttonSize | default: 14 }}px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">

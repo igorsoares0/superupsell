@@ -836,6 +836,8 @@
     }
 
     // Show popup after a successful NATIVE add-to-cart (skip our own calls)
+
+    // 1. Intercept fetch (modern themes like Dawn)
     var _popupPrevFetch = window.fetch;
     window.fetch = function (url, options) {
       if (_superupsellInternal) return _popupPrevFetch.apply(this, arguments);
@@ -853,6 +855,65 @@
         return res;
       });
     };
+
+    // 2. Intercept XMLHttpRequest (older/classic themes)
+    var _popupOrigXHROpen = XMLHttpRequest.prototype.open;
+    var _popupOrigXHRSend = XMLHttpRequest.prototype.send;
+
+    XMLHttpRequest.prototype.open = function () {
+      this._suPopupMethod = (arguments[0] || "").toUpperCase();
+      this._suPopupUrl = String(arguments[1] || "");
+      return _popupOrigXHROpen.apply(this, arguments);
+    };
+
+    XMLHttpRequest.prototype.send = function () {
+      if (
+        !_superupsellInternal &&
+        this._suPopupMethod === "POST" &&
+        this._suPopupUrl.indexOf("/cart/add") !== -1
+      ) {
+        var self = this;
+        this.addEventListener("load", function () {
+          if (self.status >= 200 && self.status < 300 && !popupShown) {
+            setTimeout(showPopup, 500);
+          }
+        });
+      }
+      return _popupOrigXHRSend.apply(this, arguments);
+    };
+
+    // 3. Intercept form submissions (non-AJAX themes)
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!form || !form.action || form.action.indexOf("/cart/add") === -1) return;
+      if (popupShown || _superupsellInternal) return;
+
+      e.preventDefault();
+      var formData = new FormData(form);
+
+      _superupsellInternal = true;
+      _popupPrevFetch("/cart/add.js", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: parseInt(formData.get("id"), 10),
+          quantity: parseInt(formData.get("quantity") || "1", 10) || 1,
+        }),
+      })
+        .then(function (res) {
+          _superupsellInternal = false;
+          if (res.ok) {
+            showPopup();
+            renderSectionsAndOpenDrawer(res);
+          } else {
+            form.submit();
+          }
+        })
+        .catch(function () {
+          _superupsellInternal = false;
+          form.submit();
+        });
+    });
   }
 
   // ─── Slider arrows ───

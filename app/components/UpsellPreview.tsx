@@ -72,6 +72,7 @@ export function UpsellPreview({ form, products }: Props) {
     width: "100%",
     textAlign: "center",
     marginTop: "12px",
+    boxSizing: "border-box",
   };
 
   return (

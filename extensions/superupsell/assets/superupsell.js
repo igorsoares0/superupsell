@@ -800,9 +800,12 @@
 
       var popup = document.createElement("div");
       popup.style.cssText =
-        "position:fixed;top:50%;left:50%;z-index:9999;padding:24px;border-radius:16px;transform:translate(-50%,-50%) scale(0.9);opacity:0;transition:transform .3s ease,opacity .3s ease;width:92%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);box-sizing:border-box;";
+        "position:fixed;top:50%;left:50%;z-index:9999;padding:24px;border-radius:16px;transform:translate(-50%,-50%) scale(0.9);opacity:0;transition:transform .3s ease,opacity .3s ease;width:92%;max-width:480px;max-height:80vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);box-sizing:border-box;background:#fff;";
 
-      popup.appendChild(content.cloneNode(true));
+      var cloned = content.cloneNode(true);
+      cloned.style.maxHeight = "calc(80vh - 48px)";
+      cloned.style.overflowY = "auto";
+      popup.appendChild(cloned);
       document.body.appendChild(overlay);
       document.body.appendChild(popup);
 

@@ -347,6 +347,14 @@
     });
     if (items.length === 0) return;
 
+    // Bundle with page product if configured
+    if (shouldBundleWithMain(widget)) {
+      var mainVid = getMainVariantId(widget);
+      if (mainVid) {
+        items.unshift({ id: mainVid, quantity: 1 });
+      }
+    }
+
     var originalText = btn.textContent;
     btn.textContent = "Adding\u2026";
     btn.disabled = true;

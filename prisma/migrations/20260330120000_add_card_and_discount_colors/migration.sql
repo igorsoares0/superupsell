@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "UpsellOffer" ADD COLUMN "cardBackgroundColor" TEXT NOT NULL DEFAULT '#FFFFFF';
+ALTER TABLE "UpsellOffer" ADD COLUMN "discountBgColor" TEXT NOT NULL DEFAULT '#E53E3E';
+ALTER TABLE "UpsellOffer" ADD COLUMN "discountTextColor" TEXT NOT NULL DEFAULT '#FFFFFF';

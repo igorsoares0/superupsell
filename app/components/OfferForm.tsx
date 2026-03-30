@@ -73,6 +73,9 @@ const DEFAULTS = {
   backgroundColor: "#FFFFFF",
   textColor: "#1A1A1A",
   borderColor: "#E0E0E0",
+  cardBackgroundColor: "#FFFFFF",
+  discountBgColor: "#E53E3E",
+  discountTextColor: "#FFFFFF",
   titleSize: 18,
   textSize: 14,
   buttonSize: 14,
@@ -177,6 +180,9 @@ export function OfferForm({
     backgroundColor: offer?.backgroundColor ?? DEFAULTS.backgroundColor,
     textColor: offer?.textColor ?? DEFAULTS.textColor,
     borderColor: offer?.borderColor ?? DEFAULTS.borderColor,
+    cardBackgroundColor: offer?.cardBackgroundColor ?? DEFAULTS.cardBackgroundColor,
+    discountBgColor: offer?.discountBgColor ?? DEFAULTS.discountBgColor,
+    discountTextColor: offer?.discountTextColor ?? DEFAULTS.discountTextColor,
     titleSize: offer?.titleSize ?? DEFAULTS.titleSize,
     textSize: offer?.textSize ?? DEFAULTS.textSize,
     buttonSize: offer?.buttonSize ?? DEFAULTS.buttonSize,
@@ -306,6 +312,9 @@ export function OfferForm({
     data.set("backgroundColor", form.backgroundColor);
     data.set("textColor", form.textColor);
     data.set("borderColor", form.borderColor);
+    data.set("cardBackgroundColor", form.cardBackgroundColor);
+    data.set("discountBgColor", form.discountBgColor);
+    data.set("discountTextColor", form.discountTextColor);
 
     data.set("discountPercentage", String(form.discountPercentage));
     data.set("titleSize", String(form.titleSize));
@@ -636,6 +645,11 @@ export function OfferForm({
                 </s-stack>
                 <s-stack direction="inline" gap="base">
                   <s-color-field
+                    label="Card background"
+                    data-field="cardBackgroundColor"
+                    value={form.cardBackgroundColor}
+                  />
+                  <s-color-field
                     label="Button color"
                     data-field="buttonColor"
                     value={form.buttonColor}
@@ -644,6 +658,18 @@ export function OfferForm({
                     label="Button text"
                     data-field="buttonTextColor"
                     value={form.buttonTextColor}
+                  />
+                </s-stack>
+                <s-stack direction="inline" gap="base">
+                  <s-color-field
+                    label="Discount badge"
+                    data-field="discountBgColor"
+                    value={form.discountBgColor}
+                  />
+                  <s-color-field
+                    label="Discount text"
+                    data-field="discountTextColor"
+                    value={form.discountTextColor}
                   />
                 </s-stack>
 

@@ -16,6 +16,9 @@ type FormState = {
   backgroundColor: string;
   textColor: string;
   borderColor: string;
+  cardBackgroundColor: string;
+  discountBgColor: string;
+  discountTextColor: string;
   titleSize: number;
   textSize: number;
   buttonSize: number;
@@ -127,8 +130,8 @@ export function UpsellPreview({ form, products }: Props) {
               <span
                 style={{
                   display: "inline-block",
-                  backgroundColor: "#e53e3e",
-                  color: "#fff",
+                  backgroundColor: form.discountBgColor || "#e53e3e",
+                  color: form.discountTextColor || "#fff",
                   fontSize: "11px",
                   fontWeight: 600,
                   padding: "2px 8px",
@@ -303,7 +306,7 @@ function ProductCard({
     border: `1px solid ${isCheckbox && isChecked ? form.buttonColor : form.borderColor}`,
     borderRadius: `${cardRadius}px`,
     padding: "10px 12px",
-    backgroundColor: "#ffffff",
+    backgroundColor: form.cardBackgroundColor || "#ffffff",
     cursor: isCheckbox ? "pointer" : undefined,
   };
 

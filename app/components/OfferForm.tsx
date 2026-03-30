@@ -455,7 +455,7 @@ export function OfferForm({
                   label="Discount percentage"
                   data-field="discountPercentage"
                   value={String(form.discountPercentage)}
-                  min={1}
+                  min={0}
                   max={100}
                   step={1}
                 />

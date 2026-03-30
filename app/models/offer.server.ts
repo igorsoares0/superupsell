@@ -62,14 +62,14 @@ export function validateOfferData(
     errors.upsellName = "Offer name is required";
   }
 
-  if (!data.discountLabel || String(data.discountLabel).trim() === "") {
-    errors.discountLabel = "Discount label is required";
+  const pct = Number(data.discountPercentage);
+  if (isNaN(pct) || pct < 0 || pct > 100) {
+    errors.discountPercentage =
+      "Discount percentage must be between 0 and 100";
   }
 
-  const pct = Number(data.discountPercentage);
-  if (isNaN(pct) || pct <= 0 || pct > 100) {
-    errors.discountPercentage =
-      "Discount percentage must be between 0.01 and 100";
+  if (pct > 0 && (!data.discountLabel || String(data.discountLabel).trim() === "")) {
+    errors.discountLabel = "Discount label is required when discount is set";
   }
 
   const targetMode = String(data.targetMode);

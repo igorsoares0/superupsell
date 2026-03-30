@@ -361,7 +361,7 @@ function ProductCard({
               width: 64,
               height: 64,
               minWidth: 64,
-              objectFit: "cover",
+              objectFit: "contain",
               borderRadius: `${imgRadius}px`,
             }}
           />

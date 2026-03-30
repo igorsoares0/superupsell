@@ -62,7 +62,7 @@
                     <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                   {% endif %}
                   {% if offer.showImage and prod.featured_image %}
-                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:contain;border-radius:{{ img_radius }}px;min-width:64px;">
                   {% elsif offer.showImage %}
                     <div style="width:64px;height:64px;min-width:64px;background:#f5f5f5;border-radius:{{ img_radius }}px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;">No img</div>
                   {% endif %}
@@ -157,7 +157,7 @@
                     <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                   {% endif %}
                   {% if offer.showImage and prod.featured_image %}
-                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                    <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:contain;border-radius:{{ img_radius }}px;min-width:64px;">
                   {% endif %}
                   <div style="flex:1;min-width:0;">
                     <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};">{{ prod.title }}</div>
@@ -233,7 +233,7 @@
                   <input type="checkbox" class="superupsell-checkbox" data-variant-id="{{ first_variant.id }}" style="width:18px;height:18px;min-width:18px;accent-color:{{ offer.buttonColor | default: '#000' }};cursor:pointer;">
                 {% endif %}
                 {% if offer.showImage and prod.featured_image %}
-                  <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:{{ img_radius }}px;min-width:64px;">
+                  <img src="{{ prod.featured_image | image_url: width: 128 }}" alt="{{ prod.featured_image.alt | escape }}" width="64" height="64" loading="lazy" style="width:64px;height:64px;object-fit:contain;border-radius:{{ img_radius }}px;min-width:64px;">
                 {% endif %}
                 <div style="flex:1;min-width:0;">
                   <div style="font-size:{{ offer.textSize | default: 14 }}px;font-weight:500;color:{{ offer.textColor | default: '#1A1A1A' }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prod.title }}</div>

@@ -798,55 +798,62 @@
 
     var popupShown = false;
 
-    function showPopup() {
-      if (popupShown) return;
-      popupShown = true;
+    function showPopupAndWait() {
+      return new Promise(function (resolve) {
+        if (popupShown) {
+          resolve();
+          return;
+        }
+        popupShown = true;
 
-      var overlay = document.createElement("div");
-      overlay.style.cssText =
-        "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9998;opacity:0;transition:opacity .3s;";
+        var overlay = document.createElement("div");
+        overlay.style.cssText =
+          "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9998;opacity:0;transition:opacity .3s;";
 
-      var popup = document.createElement("div");
-      popup.style.cssText =
-        "position:fixed;top:50%;left:50%;z-index:9999;padding:24px;border-radius:16px;transform:translate(-50%,-50%) scale(0.9);opacity:0;transition:transform .3s ease,opacity .3s ease;width:92%;max-width:480px;max-height:80vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);box-sizing:border-box;background:#fff;";
+        var popup = document.createElement("div");
+        popup.style.cssText =
+          "position:fixed;top:50%;left:50%;z-index:9999;padding:24px;border-radius:16px;transform:translate(-50%,-50%) scale(0.9);opacity:0;transition:transform .3s ease,opacity .3s ease;width:92%;max-width:480px;max-height:80vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.2);box-sizing:border-box;background:#fff;";
 
-      var cloned = content.cloneNode(true);
-      cloned.style.maxHeight = "calc(80vh - 48px)";
-      cloned.style.overflowY = "auto";
-      popup.appendChild(cloned);
-      document.body.appendChild(overlay);
-      document.body.appendChild(popup);
+        var cloned = content.cloneNode(true);
+        cloned.style.maxHeight = "calc(80vh - 48px)";
+        cloned.style.overflowY = "auto";
+        popup.appendChild(cloned);
+        document.body.appendChild(overlay);
+        document.body.appendChild(popup);
 
-      bindButtons(popup);
-      initSliders();
+        bindButtons(popup);
+        initSliders();
 
-      requestAnimationFrame(function () {
-        overlay.style.opacity = "1";
-        popup.style.transform = "translate(-50%,-50%) scale(1)";
-        popup.style.opacity = "1";
+        requestAnimationFrame(function () {
+          overlay.style.opacity = "1";
+          popup.style.transform = "translate(-50%,-50%) scale(1)";
+          popup.style.opacity = "1";
+        });
+
+        var popupContent = popup.querySelector("[data-offer-id]");
+        if (popupContent) {
+          trackEvent("impression", popupContent);
+        }
+
+        function close() {
+          popup.style.transform = "translate(-50%,-50%) scale(0.9)";
+          popup.style.opacity = "0";
+          overlay.style.opacity = "0";
+          setTimeout(function () {
+            popup.remove();
+            overlay.remove();
+            popupShown = false;
+            resolve();
+          }, 300);
+        }
+
+        overlay.addEventListener("click", close);
+        var closeBtn = popup.querySelector(".superupsell-popup-close");
+        if (closeBtn) closeBtn.addEventListener("click", close);
       });
-
-      var popupContent = popup.querySelector("[data-offer-id]");
-      if (popupContent) {
-        trackEvent("impression", popupContent);
-      }
-
-      function close() {
-        popup.style.transform = "translate(-50%,-50%) scale(0.9)";
-        popup.style.opacity = "0";
-        overlay.style.opacity = "0";
-        setTimeout(function () {
-          popup.remove();
-          overlay.remove();
-        }, 300);
-      }
-
-      overlay.addEventListener("click", close);
-      var closeBtn = popup.querySelector(".superupsell-popup-close");
-      if (closeBtn) closeBtn.addEventListener("click", close);
     }
 
-    // Show popup after a successful NATIVE add-to-cart (skip our own calls)
+    // Intercept add-to-cart and show popup FIRST, then proceed with cart add
 
     // 1. Intercept fetch (modern themes like Dawn)
     var _popupPrevFetch = window.fetch;
@@ -859,11 +866,11 @@
       var method = (options && options.method) ? options.method.toUpperCase() : (url instanceof Request ? url.method.toUpperCase() : "GET");
       if (method !== "POST") return _popupPrevFetch.apply(this, arguments);
 
-      return _popupPrevFetch.apply(this, arguments).then(function (res) {
-        if (res.ok && !popupShown) {
-          setTimeout(showPopup, 500);
-        }
-        return res;
+      // Show popup first, then proceed with original cart add
+      var fetchUrl = url;
+      var fetchOptions = options;
+      return showPopupAndWait().then(function () {
+        return _popupPrevFetch(fetchUrl, fetchOptions);
       });
     };
 
@@ -884,11 +891,19 @@
         this._suPopupUrl.indexOf("/cart/add") !== -1
       ) {
         var self = this;
-        this.addEventListener("load", function () {
-          if (self.status >= 200 && self.status < 300 && !popupShown) {
-            setTimeout(showPopup, 500);
-          }
+        var originalSend = _popupOrigXHRSend;
+        var sendArgs = arguments;
+
+        // Show popup first, then proceed with original XHR send
+        showPopupAndWait().then(function () {
+          self.addEventListener("load", function () {
+            if (self.status >= 200 && self.status < 300) {
+              // Popup already shown, no need to show again
+            }
+          });
+          originalSend.apply(self, sendArgs);
         });
+        return;
       }
       return _popupOrigXHRSend.apply(this, arguments);
     };
@@ -902,28 +917,30 @@
       e.preventDefault();
       var formData = new FormData(form);
 
-      _superupsellInternal = true;
-      _popupPrevFetch("/cart/add.js", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: parseInt(formData.get("id"), 10),
-          quantity: parseInt(formData.get("quantity") || "1", 10) || 1,
-        }),
-      })
-        .then(function (res) {
-          _superupsellInternal = false;
-          if (res.ok) {
-            showPopup();
-            renderSectionsAndOpenDrawer(res);
-          } else {
-            form.submit();
-          }
+      // Show popup first, then proceed with form submission
+      showPopupAndWait().then(function () {
+        _superupsellInternal = true;
+        _popupPrevFetch("/cart/add.js", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: parseInt(formData.get("id"), 10),
+            quantity: parseInt(formData.get("quantity") || "1", 10) || 1,
+          }),
         })
-        .catch(function () {
-          _superupsellInternal = false;
-          form.submit();
-        });
+          .then(function (res) {
+            _superupsellInternal = false;
+            if (res.ok) {
+              renderSectionsAndOpenDrawer(res);
+            } else {
+              form.submit();
+            }
+          })
+          .catch(function () {
+            _superupsellInternal = false;
+            form.submit();
+          });
+      });
     });
   }
 

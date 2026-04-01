@@ -462,6 +462,14 @@
   function bindCheckboxCards(container) {
     var hasBulkBtn = !!container.querySelector(".superupsell-bulk-add");
 
+    // Get surface type to determine if instant add should be enabled
+    var widget = container.closest("[data-surface]") || container.querySelector("[data-surface]");
+    var surface = widget ? widget.dataset.surface : null;
+
+    // Only enable instant checkbox add for popup and cart surfaces
+    // For product_page, let user click the native add-to-cart button
+    var enableInstantCheckboxAdd = surface === "popup" || surface === "cart";
+
     container.querySelectorAll(".superupsell-card").forEach(function (card) {
       var cb = card.querySelector(".superupsell-checkbox");
       if (!cb) return;
@@ -470,14 +478,14 @@
         // Don't toggle if clicking checkbox itself or variant select
         if (e.target === cb || e.target.closest(".superupsell-variant-select")) return;
         cb.checked = !cb.checked;
-        // Instant add when no bulk button exists
-        if (!hasBulkBtn && cb.checked) {
+        // Instant add when no bulk button exists (only for popup/cart, not product_page)
+        if (!hasBulkBtn && enableInstantCheckboxAdd && cb.checked) {
           handleCheckboxInstantAdd(cb);
         }
       });
 
       // Direct checkbox clicks (native toggle already happened)
-      if (!hasBulkBtn) {
+      if (!hasBulkBtn && enableInstantCheckboxAdd) {
         cb.addEventListener("change", function () {
           if (cb.checked) {
             handleCheckboxInstantAdd(cb);
@@ -583,8 +591,7 @@
 
     var originalFetch = window.fetch;
 
-    // 1. Monkey-patch fetch — let the original request go through unchanged,
-    //    then add upsell items and refresh the cart drawer sections.
+    // 1. Monkey-patch fetch — handle upsell bundling based on bundleWithMain setting
     window.fetch = function (url, options) {
       if (_superupsellInternal) return originalFetch.apply(this, arguments);
 
@@ -601,7 +608,40 @@
       var upsellAmount = upsellItems._totalPrice;
       _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: upsellVids }); });
 
-      // Let the theme's original request go through untouched
+      // Check if ANY widget with upsells has bundleWithMain disabled
+      var shouldBundleMainProduct = true;
+      for (var i = 0; i < _interceptWidgets.length; i++) {
+        var w = _interceptWidgets[i];
+        if (w.querySelectorAll(".superupsell-checkbox:checked").length > 0) {
+          if (!shouldBundleWithMain(w)) {
+            shouldBundleMainProduct = false;
+            break;
+          }
+        }
+      }
+
+      // If bundleWithMain is disabled, only add upsells (skip original product)
+      if (!shouldBundleMainProduct) {
+        _superupsellInternal = true;
+        return originalFetch("/cart/add.js", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: upsellItems }),
+        }).then(function (res) {
+          _superupsellInternal = false;
+          if (res.ok) {
+            _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: upsellVids, amount: upsellAmount }); });
+            // Refresh the cart drawer so it shows ALL items
+            refreshCartDrawer(originalFetch);
+          }
+          return res;
+        }).catch(function (err) {
+          _superupsellInternal = false;
+          throw err;
+        });
+      }
+
+      // Otherwise, let the original request pass through and add upsells alongside
       return originalFetch.apply(this, arguments).then(function (res) {
         if (!res.ok) return res;
 
@@ -648,6 +688,42 @@
           var xhrVids = upsellItems._variantIds.join(",");
           var xhrAmount = upsellItems._totalPrice;
           _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: xhrVids }); });
+
+          // Check if ANY widget with upsells has bundleWithMain disabled
+          var shouldBundleMainProduct = true;
+          for (var i = 0; i < _interceptWidgets.length; i++) {
+            var w = _interceptWidgets[i];
+            if (w.querySelectorAll(".superupsell-checkbox:checked").length > 0) {
+              if (!shouldBundleWithMain(w)) {
+                shouldBundleMainProduct = false;
+                break;
+              }
+            }
+          }
+
+          // If bundleWithMain is disabled, only add upsells (block original product)
+          if (!shouldBundleMainProduct) {
+            _superupsellInternal = true;
+            var self = this;
+            originalFetch("/cart/add.js", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ items: upsellItems }),
+            }).then(function (upsellRes) {
+              _superupsellInternal = false;
+              if (upsellRes && upsellRes.ok) {
+                _interceptWidgets.forEach(function (w) { trackEvent("add_to_cart", w, { variantId: xhrVids, amount: xhrAmount }); });
+                refreshCartDrawer(originalFetch);
+                // Trigger a load event on the XHR to simulate success
+                self.status = 200;
+                var loadEvent = new Event("load");
+                self.dispatchEvent(loadEvent);
+              }
+            }).catch(function () { _superupsellInternal = false; });
+            return;
+          }
+
+          // Otherwise, let original request pass and add upsells alongside
           var self = this;
           this.addEventListener("load", function () {
             if (!(self.status >= 200 && self.status < 300)) return;
@@ -684,7 +760,23 @@
       var items = [];
       var formData = new FormData(form);
       var normalizedFormId = normalizeVariantId(formData.get("id"));
-      if (normalizedFormId) items.push({ id: normalizedFormId, quantity: parseInt(formData.get("quantity") || "1", 10) });
+
+      // Check if ANY widget with upsells has bundleWithMain disabled
+      var shouldBundleMainProduct = true;
+      for (var i = 0; i < _interceptWidgets.length; i++) {
+        var w = _interceptWidgets[i];
+        if (w.querySelectorAll(".superupsell-checkbox:checked").length > 0) {
+          if (!shouldBundleWithMain(w)) {
+            shouldBundleMainProduct = false;
+            break;
+          }
+        }
+      }
+
+      // Only add main product if bundleWithMain is enabled
+      if (shouldBundleMainProduct && normalizedFormId) {
+        items.push({ id: normalizedFormId, quantity: parseInt(formData.get("quantity") || "1", 10) });
+      }
       items = items.concat(upsellItems);
 
       _interceptWidgets.forEach(function (w) { trackEvent("click", w, { variantId: formVids }); });
@@ -727,11 +819,24 @@
 
       var buyVids = upsellItems._variantIds.join(",");
       var buyAmount = upsellItems._totalPrice;
+
+      // Check if ANY widget with upsells has bundleWithMain disabled
+      var shouldBundleMainProduct = true;
+      for (var i = 0; i < _interceptWidgets.length; i++) {
+        var w = _interceptWidgets[i];
+        if (w.querySelectorAll(".superupsell-checkbox:checked").length > 0) {
+          if (!shouldBundleWithMain(w)) {
+            shouldBundleMainProduct = false;
+            break;
+          }
+        }
+      }
+
       var variantInput = document.querySelector(
         "form[action*='/cart/add'] [name='id'], product-form [name='id'], .product-form [name='id']"
       );
       var items = upsellItems.slice();
-      if (variantInput) {
+      if (shouldBundleMainProduct && variantInput) {
         var qtyInput = document.querySelector(
           "form[action*='/cart/add'] [name='quantity'], product-form [name='quantity']"
         );
@@ -861,6 +966,7 @@
     // Intercept add-to-cart and show popup FIRST, then proceed with cart add
 
     // 1. Intercept fetch (modern themes like Dawn)
+    // NOTE: Skip popup if native interceptor (product_page/cart checkboxes) is already bound
     var _popupPrevFetch = window.fetch;
     var _popupFetchPromise = null;
     window.fetch = function (url, options) {
@@ -871,6 +977,9 @@
 
       var method = (options && options.method) ? options.method.toUpperCase() : (url instanceof Request ? url.method.toUpperCase() : "GET");
       if (method !== "POST") return _popupPrevFetch.apply(this, arguments);
+
+      // Skip popup if native interceptor already handles this (product_page/cart with checkboxes)
+      if (_nativeInterceptBound) return _popupPrevFetch.apply(this, arguments);
 
       // If a popup/fetch is already pending, return the same promise to avoid duplicate requests
       if (_popupFetchPromise) {
@@ -904,6 +1013,11 @@
         this._suPopupMethod === "POST" &&
         this._suPopupUrl.indexOf("/cart/add") !== -1
       ) {
+        // Skip popup if native interceptor already handles this (product_page/cart with checkboxes)
+        if (_nativeInterceptBound) {
+          return _popupOrigXHRSend.apply(this, arguments);
+        }
+
         var self = this;
         var originalSend = _popupOrigXHRSend;
         var sendArgs = arguments;
@@ -923,9 +1037,13 @@
     };
 
     // 3. Intercept form submissions (non-AJAX themes)
+    // NOTE: Skip if native interceptor is already bound (to avoid duplicate form handling)
     document.addEventListener("submit", function (e) {
       var form = e.target;
       if (!form || !form.action || form.action.indexOf("/cart/add") === -1) return;
+
+      // Skip if native interceptor (product_page/cart with checkboxes) already handles this form
+      if (_nativeInterceptBound) return;
 
       // If popup is already showing or this is an internal call, prevent default to avoid double submission
       if (popupShown || _superupsellInternal) {

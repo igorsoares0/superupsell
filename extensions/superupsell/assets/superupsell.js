@@ -503,6 +503,7 @@
 
   var _interceptWidgets = [];
   var _nativeInterceptBound = false;
+  var _popupInterceptBound = false;
   var _superupsellInternal = false;
 
   function normalizeVariantId(rawId) {
@@ -796,6 +797,10 @@
     var content = dataEl.querySelector(".superupsell-popup-content");
     if (!content) return;
 
+    // Prevent duplicate initialization of popup interceptors
+    if (_popupInterceptBound) return;
+    _popupInterceptBound = true;
+
     var popupShown = false;
 
     function showPopupAndWait() {
@@ -857,6 +862,7 @@
 
     // 1. Intercept fetch (modern themes like Dawn)
     var _popupPrevFetch = window.fetch;
+    var _popupFetchPromise = null;
     window.fetch = function (url, options) {
       if (_superupsellInternal) return _popupPrevFetch.apply(this, arguments);
 
@@ -866,12 +872,20 @@
       var method = (options && options.method) ? options.method.toUpperCase() : (url instanceof Request ? url.method.toUpperCase() : "GET");
       if (method !== "POST") return _popupPrevFetch.apply(this, arguments);
 
+      // If a popup/fetch is already pending, return the same promise to avoid duplicate requests
+      if (_popupFetchPromise) {
+        return _popupFetchPromise;
+      }
+
       // Show popup first, then proceed with original cart add
       var fetchUrl = url;
       var fetchOptions = options;
-      return showPopupAndWait().then(function () {
-        return _popupPrevFetch(fetchUrl, fetchOptions);
+      _popupFetchPromise = showPopupAndWait().then(function () {
+        var result = _popupPrevFetch(fetchUrl, fetchOptions);
+        _popupFetchPromise = null;
+        return result;
       });
+      return _popupFetchPromise;
     };
 
     // 2. Intercept XMLHttpRequest (older/classic themes)
@@ -912,7 +926,12 @@
     document.addEventListener("submit", function (e) {
       var form = e.target;
       if (!form || !form.action || form.action.indexOf("/cart/add") === -1) return;
-      if (popupShown || _superupsellInternal) return;
+
+      // If popup is already showing or this is an internal call, prevent default to avoid double submission
+      if (popupShown || _superupsellInternal) {
+        e.preventDefault();
+        return;
+      }
 
       e.preventDefault();
       var formData = new FormData(form);

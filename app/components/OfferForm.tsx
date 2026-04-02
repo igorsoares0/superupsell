@@ -430,7 +430,7 @@ export function OfferForm({
             style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
             {/* Basic Settings */}
-            <s-box padding="large-200" border="base" border-radius="base">
+            <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
                 <s-stack direction="inline" gap="small-200" align-items="center">
                   <s-icon type="settings" color="subdued" size="small" />
@@ -477,7 +477,7 @@ export function OfferForm({
             </s-box>
 
             {/* Target Mode */}
-            <s-box padding="large-200" border="base" border-radius="base">
+            <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
                 <s-stack direction="inline" gap="small-200" align-items="center">
                   <s-icon type="collection" color="subdued" size="small" />
@@ -533,7 +533,7 @@ export function OfferForm({
             </s-box>
 
             {/* Upsell Products */}
-            <s-box padding="large-200" border="base" border-radius="base">
+            <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
                 <s-stack direction="inline" gap="small-200" align-items="center">
                   <s-icon type="product" color="subdued" size="small" />
@@ -567,7 +567,7 @@ export function OfferForm({
             </s-box>
 
             {/* Display Options */}
-            <s-box padding="large-200" border="base" border-radius="base">
+            <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
                 <s-stack direction="inline" gap="small-200" align-items="center">
                   <s-icon type="grid" color="subdued" size="small" />
@@ -624,7 +624,7 @@ export function OfferForm({
             </s-box>
 
             {/* Design */}
-            <s-box padding="large-200" border="base" border-radius="base">
+            <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
                 <s-stack direction="inline" gap="small-200" align-items="center">
                   <s-icon type="wand" color="subdued" size="small" />

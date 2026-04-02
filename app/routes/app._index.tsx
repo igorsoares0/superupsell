@@ -274,16 +274,29 @@ export default function Home() {
                         </s-text>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-button-group gap="base">
-                          <s-button
-                            variant="tertiary"
-                            icon={offer.isActive ? "toggle-off" : "toggle-on"}
-                            data-offer-action="toggle"
-                            data-offer-id={offer.id}
-                            data-offer-surface={offer.surface}
-                          >
-                            {offer.isActive ? "Deactivate" : "Activate"}
-                          </s-button>
+                        <s-stack direction="inline" gap="small-200">
+                          {offer.isActive ? (
+                            <s-button
+                              variant="secondary"
+                              tone="critical"
+                              icon="toggle-off"
+                              data-offer-action="toggle"
+                              data-offer-id={offer.id}
+                              data-offer-surface={offer.surface}
+                            >
+                              Deactivate
+                            </s-button>
+                          ) : (
+                            <s-button
+                              variant="primary"
+                              icon="toggle-on"
+                              data-offer-action="toggle"
+                              data-offer-id={offer.id}
+                              data-offer-surface={offer.surface}
+                            >
+                              Activate
+                            </s-button>
+                          )}
                           <s-button
                             variant="tertiary"
                             tone="critical"
@@ -294,7 +307,7 @@ export default function Home() {
                           >
                             Delete
                           </s-button>
-                        </s-button-group>
+                        </s-stack>
                       </s-table-cell>
                     </s-table-row>
                   );

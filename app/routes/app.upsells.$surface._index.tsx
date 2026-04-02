@@ -165,15 +165,27 @@ export default function OfferList() {
                     </s-text>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-button-group gap="base">
-                      <s-button
-                        variant="tertiary"
-                        icon={offer.isActive ? "toggle-off" : "toggle-on"}
-                        data-offer-action="toggle"
-                        data-offer-id={offer.id}
-                      >
-                        {offer.isActive ? "Deactivate" : "Activate"}
-                      </s-button>
+                    <s-stack direction="inline" gap="small-200">
+                      {offer.isActive ? (
+                        <s-button
+                          variant="secondary"
+                          tone="critical"
+                          icon="toggle-off"
+                          data-offer-action="toggle"
+                          data-offer-id={offer.id}
+                        >
+                          Deactivate
+                        </s-button>
+                      ) : (
+                        <s-button
+                          variant="primary"
+                          icon="toggle-on"
+                          data-offer-action="toggle"
+                          data-offer-id={offer.id}
+                        >
+                          Activate
+                        </s-button>
+                      )}
                       <s-button
                         variant="tertiary"
                         tone="critical"
@@ -183,7 +195,7 @@ export default function OfferList() {
                       >
                         Delete
                       </s-button>
-                    </s-button-group>
+                    </s-stack>
                   </s-table-cell>
                 </s-table-row>
               ))}

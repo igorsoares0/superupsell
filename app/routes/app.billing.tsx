@@ -111,155 +111,133 @@ export default function Billing() {
   return (
     <s-page heading="Billing">
       {actionData?.error && (
-        <div style={{ marginBottom: "16px" }}>
-          <s-banner tone="critical">{actionData.error}</s-banner>
-        </div>
+        <s-banner tone="critical">{actionData.error}</s-banner>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+      <s-grid gridTemplateColumns="@container (inline-size <= 500px) 1fr, 1fr 1fr" gap="base">
         {/* Plan card */}
-        <div
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: "12px",
-            border: "1px solid #E3E5E7",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <s-box padding="large-200" borderWidth="base" borderColor="base" border-radius="base" background="base">
           <s-stack direction="block" gap="large-200">
             <s-stack direction="block" gap="small-200">
-              <s-badge tone="info">Current plan</s-badge>
-              <s-text variant="headingLg">SuperUpsell Pro</s-text>
+              <s-badge tone="info" icon="star-filled">Current plan</s-badge>
+              <s-heading>SuperUpsell Pro</s-heading>
             </s-stack>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
-              <span style={{ fontSize: "36px", fontWeight: 700, color: "#202223", letterSpacing: "-1px" }}>
-                $12.99
-              </span>
-              <span style={{ fontSize: "14px", color: "#6D7175" }}>/month</span>
-            </div>
+            <s-stack direction="inline" gap="small-200" align-items="baseline">
+              <span style={{ fontSize: "2rem", fontWeight: 700, color: "var(--p-color-text)" }}>$12.99</span>
+              <s-text>/month</s-text>
+            </s-stack>
 
-            <s-text tone="subdued">
-              14-day free trial included. No charge until the trial ends.
-            </s-text>
-
-            <div style={{ borderTop: "1px solid #E3E5E7", paddingTop: "16px" }}>
-              <s-stack direction="block" gap="small-200">
-                {FEATURES.map((f) => (
-                  <div key={f} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="8" fill="#E4F5E9" />
-                      <path d="M5 8l2 2 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <s-text variant="bodySm">{f}</s-text>
-                  </div>
-                ))}
+            <s-box padding="small-200" border-radius="base" background="subdued">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="check-circle" tone="info" size="small" />
+                <s-text>14-day free trial included. No charge until the trial ends.</s-text>
               </s-stack>
-            </div>
+            </s-box>
+
+            <s-divider />
+            <s-text type="strong">What's included:</s-text>
+            <s-stack direction="block" gap="small-200">
+              {FEATURES.map((f) => (
+                <s-stack key={f} direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="check-circle" tone="success" size="small" />
+                  <s-text>{f}</s-text>
+                </s-stack>
+              ))}
+            </s-stack>
+
+            {!hasActivePayment && (
+              <s-button
+                ref={subscribeRef}
+                variant="primary"
+                icon="star-filled"
+                {...(isBusy ? { loading: true } : {})}
+              >
+                Start 14-day free trial
+              </s-button>
+            )}
           </s-stack>
-        </div>
+        </s-box>
 
         {/* Status card */}
-        <div
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: "12px",
-            border: "1px solid #E3E5E7",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <s-box padding="large-200" borderWidth="base" borderColor="base" border-radius="base" background="base">
           <s-stack direction="block" gap="large-200">
-            <s-text variant="headingMd">Subscription Status</s-text>
+            <s-stack direction="inline" gap="small-200" align-items="center">
+              <s-icon type="order" size="small" />
+              <s-heading>Subscription Status</s-heading>
+            </s-stack>
 
             {hasActivePayment ? (
               <>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    backgroundColor: "#E4F5E9",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="10" fill="#059669" />
-                    <path d="M6 10l3 3 5-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <s-text variant="bodySm">
-                    Your subscription is active.{subscription?.test ? " (test mode)" : ""}
-                  </s-text>
-                </div>
+                <s-banner tone="success">
+                  Your subscription is active.{subscription?.test ? " (test mode)" : ""}
+                </s-banner>
 
-                <div style={{ borderTop: "1px solid #E3E5E7", paddingTop: "16px" }}>
-                  <s-stack direction="block" gap="small-200">
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <s-text tone="subdued" variant="bodySm">Plan</s-text>
-                      <s-text variant="bodySm">{subscription?.name ?? "SuperUpsell Pro"}</s-text>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <s-text tone="subdued" variant="bodySm">Status</s-text>
-                      <s-badge tone="success">Active</s-badge>
-                    </div>
+                <s-box padding="base" border-radius="base" background="subdued">
+                  <s-stack direction="block" gap="base">
+                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                      <s-text type="strong">Plan</s-text>
+                      <s-text>{subscription?.name ?? "SuperUpsell Pro"}</s-text>
+                    </s-stack>
+                    <s-divider />
+                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                      <s-text type="strong">Status</s-text>
+                      <s-badge tone="success" icon="check-circle">Active</s-badge>
+                    </s-stack>
                     {subscription?.test && (
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <s-text tone="subdued" variant="bodySm">Mode</s-text>
-                        <s-badge>Test</s-badge>
-                      </div>
+                      <>
+                        <s-divider />
+                        <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                          <s-text type="strong">Mode</s-text>
+                          <s-badge tone="warning">Test</s-badge>
+                        </s-stack>
+                      </>
                     )}
                   </s-stack>
-                </div>
+                </s-box>
 
-                <div style={{ marginTop: "auto", paddingTop: "8px" }}>
-                  <s-button
-                    ref={cancelRef}
-                    variant="tertiary"
-                    tone="critical"
-                    {...(isBusy ? { loading: true } : {})}
-                  >
-                    Cancel subscription
-                  </s-button>
-                </div>
+                <s-button
+                  ref={cancelRef}
+                  variant="tertiary"
+                  tone="critical"
+                  icon="x-circle"
+                  {...(isBusy ? { loading: true } : {})}
+                >
+                  Cancel subscription
+                </s-button>
               </>
             ) : (
               <>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    backgroundColor: "#FFF4E4",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <circle cx="10" cy="10" r="10" fill="#B98900" />
-                    <text x="10" y="14.5" textAnchor="middle" fill="#fff" fontSize="14" fontWeight="bold">!</text>
-                  </svg>
-                  <s-text variant="bodySm">
-                    No active subscription. Subscribe to access all features.
-                  </s-text>
-                </div>
+                <s-banner tone="warning">
+                  No active subscription. Subscribe to unlock all features.
+                </s-banner>
 
-                <div style={{ marginTop: "auto", paddingTop: "8px" }}>
-                  <s-button
-                    ref={subscribeRef}
-                    variant="primary"
-                    {...(isBusy ? { loading: true } : {})}
-                  >
-                    Start 14-day free trial
-                  </s-button>
-                </div>
+                <s-box padding="base" border-radius="base" background="subdued">
+                  <s-stack direction="block" gap="base">
+                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                      <s-text type="strong">Plan</s-text>
+                      <s-text>SuperUpsell Pro</s-text>
+                    </s-stack>
+                    <s-divider />
+                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                      <s-text type="strong">Status</s-text>
+                      <s-badge tone="critical" icon="x-circle">Inactive</s-badge>
+                    </s-stack>
+                  </s-stack>
+                </s-box>
+
+                <s-button
+                  ref={subscribeRef}
+                  variant="primary"
+                  icon="star-filled"
+                  {...(isBusy ? { loading: true } : {})}
+                >
+                  Start 14-day free trial
+                </s-button>
               </>
             )}
           </s-stack>
-        </div>
-      </div>
+        </s-box>
+      </s-grid>
     </s-page>
   );
 }

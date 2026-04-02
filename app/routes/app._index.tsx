@@ -24,24 +24,33 @@ const SURFACE_LABELS: Record<string, string> = {
   cart: "Cart",
 };
 
+const SURFACE_ICONS: Record<string, string> = {
+  product_page: "product",
+  popup: "maximize",
+  cart: "cart",
+} as const;
+
 const SURFACES = [
   {
     key: "product_page",
     title: "Product Page",
     description: "Show offers on product pages to encourage add-ons.",
     href: "/app/upsells/product-page/new",
+    icon: "product",
   },
   {
     key: "popup",
     title: "Popup",
     description: "Trigger a popup when customers add items to cart.",
     href: "/app/upsells/popup/new",
+    icon: "maximize",
   },
   {
     key: "cart",
     title: "Cart Page",
     description: "Present offers in the cart before checkout.",
     href: "/app/upsells/cart/new",
+    icon: "cart",
   },
 ] as const;
 
@@ -131,51 +140,91 @@ export default function Home() {
   return (
     <div ref={containerRef}>
       <s-page heading="SuperUpsell">
-        {/* Stats row */}
+        {/* Metrics row */}
         {offers.length > 0 && (
-          <s-grid gridTemplateColumns="1fr 1fr 1fr" gap="base">
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
-              <s-stack direction="block" gap="small-100">
-                <s-text tone="subdued" variant="bodySm">Total offers</s-text>
-                <s-text variant="headingLg">{offers.length}</s-text>
-              </s-stack>
-            </div>
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
-              <s-stack direction="block" gap="small-100">
-                <s-text tone="subdued" variant="bodySm">Active</s-text>
-                <s-text variant="headingLg" tone="success">{activeCount}</s-text>
-              </s-stack>
-            </div>
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
-              <s-stack direction="block" gap="small-100">
-                <s-text tone="subdued" variant="bodySm">Inactive</s-text>
-                <s-text variant="headingLg">{offers.length - activeCount}</s-text>
-              </s-stack>
-            </div>
-          </s-grid>
+          <s-section padding="base">
+            <s-grid
+              gridTemplateColumns="@container (inline-size <= 400px) 1fr, 1fr auto 1fr auto 1fr"
+              gap="small"
+            >
+              <s-clickable
+                paddingBlock="small-400"
+                paddingInline="small-100"
+                borderRadius="base"
+              >
+                <s-grid gap="small-300">
+                  <s-stack direction="inline" gap="small-200" align-items="center">
+                    <s-icon type="list-bulleted" color="subdued" size="small" />
+                    <s-heading>Total offers</s-heading>
+                  </s-stack>
+                  <s-text>{offers.length}</s-text>
+                </s-grid>
+              </s-clickable>
+              <s-divider direction="block" />
+              <s-clickable
+                paddingBlock="small-400"
+                paddingInline="small-100"
+                borderRadius="base"
+              >
+                <s-grid gap="small-300">
+                  <s-stack direction="inline" gap="small-200" align-items="center">
+                    <s-icon type="check-circle" tone="success" size="small" />
+                    <s-heading>Active</s-heading>
+                  </s-stack>
+                  <s-stack direction="inline" gap="small-200">
+                    <s-text>{activeCount}</s-text>
+                    {activeCount > 0 && (
+                      <s-badge tone="success" icon="check-circle">Running</s-badge>
+                    )}
+                  </s-stack>
+                </s-grid>
+              </s-clickable>
+              <s-divider direction="block" />
+              <s-clickable
+                paddingBlock="small-400"
+                paddingInline="small-100"
+                borderRadius="base"
+              >
+                <s-grid gap="small-300">
+                  <s-stack direction="inline" gap="small-200" align-items="center">
+                    <s-icon type="x-circle" color="subdued" size="small" />
+                    <s-heading>Inactive</s-heading>
+                  </s-stack>
+                  <s-text>{offers.length - activeCount}</s-text>
+                </s-grid>
+              </s-clickable>
+            </s-grid>
+          </s-section>
         )}
 
-        {/* Surface cards */}
-        <div style={{ marginTop: "12px" }} />
+        {/* Create new offer */}
         <s-section heading="Create new offer">
-          <s-grid gridTemplateColumns="1fr 1fr 1fr" gap="base">
+          <s-grid
+            gridTemplateColumns="@container (inline-size <= 500px) 1fr, 1fr 1fr 1fr"
+            gap="base"
+          >
             {SURFACES.map((surface) => (
-              <div
+              <s-box
                 key={surface.key}
-                style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "20px" }}
+                padding="large-200"
+                border="base"
+                border-radius="base"
               >
                 <s-stack direction="block" gap="base">
-                  <s-stack direction="block" gap="small-200">
-                    <s-text variant="headingMd">{surface.title}</s-text>
-                    <s-text tone="subdued" variant="bodySm">
-                      {surface.description}
-                    </s-text>
+                  <s-stack direction="inline" gap="base" align-items="center">
+                    <s-box padding="small-200" background="subdued" border-radius="base">
+                      <s-icon type={surface.icon} />
+                    </s-box>
+                    <s-stack direction="block" gap="small-100">
+                      <s-heading>{surface.title}</s-heading>
+                      <s-text color="subdued">{surface.description}</s-text>
+                    </s-stack>
                   </s-stack>
-                  <s-button variant="primary" href={surface.href}>
+                  <s-button variant="primary" icon="plus" href={surface.href}>
                     Create offer
                   </s-button>
                 </s-stack>
-              </div>
+              </s-box>
             ))}
           </s-grid>
         </s-section>
@@ -203,26 +252,32 @@ export default function Home() {
                         </s-link>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-badge>{SURFACE_LABELS[offer.surface]}</s-badge>
+                        <s-badge icon={SURFACE_ICONS[offer.surface] as any}>
+                          {SURFACE_LABELS[offer.surface]}
+                        </s-badge>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-badge tone={offer.isActive ? "success" : undefined}>
+                        <s-badge
+                          tone={offer.isActive ? "success" : undefined}
+                          icon={offer.isActive ? "check-circle" : "x-circle"}
+                        >
                           {offer.isActive ? "Active" : "Inactive"}
                         </s-badge>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-text variant="bodyMd">{offer.discountPercentage}%</s-text>
+                        <s-badge icon="discount">{offer.discountPercentage}%</s-badge>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-text tone="subdued">
+                        <s-text color="subdued">
                           {offer.products.length} product
                           {offer.products.length !== 1 ? "s" : ""}
                         </s-text>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-stack direction="inline" gap="small-100">
+                        <s-button-group gap="base">
                           <s-button
                             variant="tertiary"
+                            icon={offer.isActive ? "toggle-off" : "toggle-on"}
                             data-offer-action="toggle"
                             data-offer-id={offer.id}
                             data-offer-surface={offer.surface}
@@ -232,13 +287,14 @@ export default function Home() {
                           <s-button
                             variant="tertiary"
                             tone="critical"
+                            icon="delete"
                             data-offer-action="delete"
                             data-offer-id={offer.id}
                             data-offer-surface={offer.surface}
                           >
                             Delete
                           </s-button>
-                        </s-stack>
+                        </s-button-group>
                       </s-table-cell>
                     </s-table-row>
                   );
@@ -247,15 +303,21 @@ export default function Home() {
             </s-table>
           </s-section>
         ) : (
-          <s-section>
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "48px 24px", textAlign: "center" }}>
-              <s-stack direction="block" gap="base" align-items="center">
-                <s-text variant="headingMd">No offers yet</s-text>
-                <s-text tone="subdued">
-                  Get started by creating your first upsell offer above.
-                </s-text>
-              </s-stack>
-            </div>
+          <s-section accessibilityLabel="Empty state section">
+            <s-grid gap="base" justifyItems="center" paddingBlock="large-400">
+              <s-grid justifyItems="center" maxInlineSize="450px" gap="base">
+                <s-stack align-items="center" direction="block" gap="small-200">
+                  <s-icon type="discount" color="subdued" />
+                  <s-heading>No offers yet</s-heading>
+                  <s-paragraph color="subdued">
+                    Create your first upsell offer to start boosting your revenue.
+                  </s-paragraph>
+                </s-stack>
+                <s-button variant="primary" icon="plus" href="/app/upsells/product-page/new">
+                  Create your first offer
+                </s-button>
+              </s-grid>
+            </s-grid>
           </s-section>
         )}
       </s-page>

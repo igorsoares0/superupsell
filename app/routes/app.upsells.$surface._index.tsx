@@ -114,11 +114,21 @@ export default function OfferList() {
         </s-link>
 
         {offers.length === 0 ? (
-          <s-section heading="No offers yet">
-            <s-paragraph>
-              Create your first {label.toLowerCase()} upsell offer to get
-              started.
-            </s-paragraph>
+          <s-section accessibilityLabel="Empty state section">
+            <s-grid gap="base" justifyItems="center" paddingBlock="large-400">
+              <s-grid justifyItems="center" maxInlineSize="450px" gap="base">
+                <s-stack align-items="center" direction="block" gap="small-200">
+                  <s-icon type="discount" color="subdued" />
+                  <s-heading>No offers yet</s-heading>
+                  <s-paragraph color="subdued">
+                    Create your first {label.toLowerCase()} upsell offer to get started.
+                  </s-paragraph>
+                </s-stack>
+                <s-button variant="primary" icon="plus" href={`/app/upsells/${slug}/new`}>
+                  Create offer
+                </s-button>
+              </s-grid>
+            </s-grid>
           </s-section>
         ) : (
           <s-table>
@@ -138,19 +148,27 @@ export default function OfferList() {
                     </s-link>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-badge tone={offer.isActive ? "success" : undefined}>
+                    <s-badge
+                      tone={offer.isActive ? "success" : undefined}
+                      icon={offer.isActive ? "check-circle" : "x-circle"}
+                    >
                       {offer.isActive ? "Active" : "Inactive"}
                     </s-badge>
                   </s-table-cell>
-                  <s-table-cell>{offer.discountPercentage}%</s-table-cell>
                   <s-table-cell>
-                    {offer.products.length} product
-                    {offer.products.length !== 1 ? "s" : ""}
+                    <s-badge icon="discount">{offer.discountPercentage}%</s-badge>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-stack direction="inline" gap="small-100">
+                    <s-text color="subdued">
+                      {offer.products.length} product
+                      {offer.products.length !== 1 ? "s" : ""}
+                    </s-text>
+                  </s-table-cell>
+                  <s-table-cell>
+                    <s-button-group gap="base">
                       <s-button
                         variant="tertiary"
+                        icon={offer.isActive ? "toggle-off" : "toggle-on"}
                         data-offer-action="toggle"
                         data-offer-id={offer.id}
                       >
@@ -159,12 +177,13 @@ export default function OfferList() {
                       <s-button
                         variant="tertiary"
                         tone="critical"
+                        icon="delete"
                         data-offer-action="delete"
                         data-offer-id={offer.id}
                       >
                         Delete
                       </s-button>
-                    </s-stack>
+                    </s-button-group>
                   </s-table-cell>
                 </s-table-row>
               ))}

@@ -430,9 +430,12 @@ export function OfferForm({
             style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
             {/* Basic Settings */}
-            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <s-box padding="large-200" border="base" border-radius="base">
               <s-stack direction="block" gap="base">
-                <s-heading>Basic Settings</s-heading>
+                <s-stack direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="settings" color="subdued" size="small" />
+                  <s-heading>Basic Settings</s-heading>
+                </s-stack>
                 <s-text-field
                   label="Offer name"
                   data-field="upsellName"
@@ -471,12 +474,15 @@ export function OfferForm({
                   checked={form.isActive || undefined}
                 />
               </s-stack>
-            </div>
+            </s-box>
 
             {/* Target Mode */}
-            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <s-box padding="large-200" border="base" border-radius="base">
               <s-stack direction="block" gap="base">
-                <s-heading>Target Products</s-heading>
+                <s-stack direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="collection" color="subdued" size="small" />
+                  <s-heading>Target Products</s-heading>
+                </s-stack>
                 <s-select
                   ref={targetModeRef}
                   label="Apply to"
@@ -524,12 +530,15 @@ export function OfferForm({
                   <s-banner tone="critical">{errors.targets}</s-banner>
                 )}
               </s-stack>
-            </div>
+            </s-box>
 
             {/* Upsell Products */}
-            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <s-box padding="large-200" border="base" border-radius="base">
               <s-stack direction="block" gap="base">
-                <s-heading>Upsell Products</s-heading>
+                <s-stack direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="product" color="subdued" size="small" />
+                  <s-heading>Upsell Products</s-heading>
+                </s-stack>
                 <s-button ref={pickProductsRef}>
                   Select upsell products ({selectedProducts.length} selected)
                 </s-button>
@@ -555,12 +564,15 @@ export function OfferForm({
                   </s-banner>
                 )}
               </s-stack>
-            </div>
+            </s-box>
 
             {/* Display Options */}
-            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <s-box padding="large-200" border="base" border-radius="base">
               <s-stack direction="block" gap="base">
-                <s-heading>Display Options</s-heading>
+                <s-stack direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="grid" color="subdued" size="small" />
+                  <s-heading>Display Options</s-heading>
+                </s-stack>
                 <s-select
                   ref={layoutRef}
                   label="Layout"
@@ -605,16 +617,19 @@ export function OfferForm({
                   label="Bundle with page product"
                   checked={form.bundleWithMainProduct || undefined}
                 />
-                <span style={{ fontSize: "12px", color: "#6d7175" }}>
+                <s-text color="subdued">
                   When enabled, clicking "Add to cart" also adds the current page's product to the cart
-                </span>
+                </s-text>
               </s-stack>
-            </div>
+            </s-box>
 
             {/* Design */}
-            <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <s-box padding="large-200" border="base" border-radius="base">
               <s-stack direction="block" gap="base">
-                <s-heading>Design</s-heading>
+                <s-stack direction="inline" gap="small-200" align-items="center">
+                  <s-icon type="wand" color="subdued" size="small" />
+                  <s-heading>Design</s-heading>
+                </s-stack>
                 <s-text-field
                   label="Title text"
                   data-field="titleText"
@@ -711,7 +726,7 @@ export function OfferForm({
                   />
                 </s-stack>
               </s-stack>
-            </div>
+            </s-box>
           </div>
 
           {/* ─── Right column: live preview ─── */}
@@ -734,66 +749,35 @@ function ResourceItem({
   onRemove: () => void;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "8px 10px",
-        border: "1px solid #e0e0e0",
-        borderRadius: "8px",
-        backgroundColor: "#fafafa",
-      }}
-    >
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={title}
+    <s-box padding="small-200" border="base" border-radius="base" background="subdued">
+      <s-stack direction="inline" gap="small-200" align-items="center">
+        {imageUrl ? (
+          <s-thumbnail src={imageUrl} alt={title} size="small" />
+        ) : (
+          <s-box padding="small-200" background="subdued" border-radius="base">
+            <s-icon type="image" color="subdued" size="small" />
+          </s-box>
+        )}
+        <s-text>{title}</s-text>
+        <button
+          type="button"
+          onClick={onRemove}
           style={{
-            width: 40,
-            height: 40,
-            objectFit: "cover",
-            borderRadius: 6,
-            border: "1px solid #e0e0e0",
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 6,
-            backgroundColor: "#e0e0e0",
+            marginLeft: "auto",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px",
+            borderRadius: "4px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "12px",
-            color: "#888",
           }}
+          aria-label={`Remove ${title}`}
         >
-          N/A
-        </div>
-      )}
-      <span style={{ flex: 1, fontSize: "13px", fontWeight: 500 }}>
-        {title}
-      </span>
-      <button
-        type="button"
-        onClick={onRemove}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "18px",
-          color: "#888",
-          padding: "2px 6px",
-          borderRadius: 4,
-          lineHeight: 1,
-        }}
-        aria-label={`Remove ${title}`}
-      >
-        &times;
-      </button>
-    </div>
+          <s-icon type="x-circle" size="small" color="subdued" />
+        </button>
+      </s-stack>
+    </s-box>
   );
 }

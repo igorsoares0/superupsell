@@ -109,6 +109,12 @@ const SURFACE_LABELS: Record<string, string> = {
   cart: "Cart",
 };
 
+const SURFACE_ICONS: Record<string, string> = {
+  product_page: "product",
+  popup: "maximize",
+  cart: "cart",
+} as const;
+
 export default function Analytics() {
   const { period, surface, totals, surfaceBreakdown, dailyTrend } =
     useLoaderData<typeof loader>();
@@ -161,8 +167,8 @@ export default function Analytics() {
   return (
     <s-page heading="Analytics">
       {/* Filters */}
-      <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+      <s-box padding="large-200" border="base" border-radius="base">
+        <s-grid gridTemplateColumns="1fr 1fr" gap="base">
           <s-select ref={periodRef} label="Period" value={period}>
             {PERIOD_OPTIONS.map((o) => (
               <s-option key={o.value} value={o.value}>
@@ -178,59 +184,126 @@ export default function Analytics() {
               </s-option>
             ))}
           </s-select>
-        </div>
-      </div>
+        </s-grid>
+      </s-box>
 
-      {/* KPI Cards */}
-      <div style={{ marginTop: "16px" }} />
-      <s-grid gridTemplateColumns="1fr 1fr 1fr 1fr 1fr 1fr" gap="base">
-        <KpiCard title="Impressions" value={totals.impressions.toLocaleString()} />
-        <KpiCard title="Clicks" value={totals.clicks.toLocaleString()} />
-        <KpiCard title="Add to Cart" value={totals.addToCarts.toLocaleString()} />
-        <KpiCard title="Orders" value={totals.conversions.toLocaleString()} />
-        <KpiCard title="Conv. Rate" value={`${totals.conversionRate}%`} />
-        <KpiCard title="Revenue" value={`$${totals.revenue.toFixed(2)}`} />
-      </s-grid>
+      {/* KPI Cards - Row 1 */}
+      <s-section padding="base">
+        <s-grid
+          gridTemplateColumns="@container (inline-size <= 400px) 1fr, 1fr auto 1fr auto 1fr"
+          gap="small"
+        >
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="view" color="subdued" size="small" />
+                <s-heading>Impressions</s-heading>
+              </s-stack>
+              <s-text>{totals.impressions.toLocaleString()}</s-text>
+            </s-grid>
+          </s-clickable>
+          <s-divider direction="block" />
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="link" color="subdued" size="small" />
+                <s-heading>Clicks</s-heading>
+              </s-stack>
+              <s-text>{totals.clicks.toLocaleString()}</s-text>
+            </s-grid>
+          </s-clickable>
+          <s-divider direction="block" />
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="cart" color="subdued" size="small" />
+                <s-heading>Add to Cart</s-heading>
+              </s-stack>
+              <s-text>{totals.addToCarts.toLocaleString()}</s-text>
+            </s-grid>
+          </s-clickable>
+        </s-grid>
+      </s-section>
+
+      {/* KPI Cards - Row 2 */}
+      <s-section padding="base">
+        <s-grid
+          gridTemplateColumns="@container (inline-size <= 400px) 1fr, 1fr auto 1fr auto 1fr"
+          gap="small"
+        >
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="order" color="subdued" size="small" />
+                <s-heading>Orders</s-heading>
+              </s-stack>
+              <s-text>{totals.conversions.toLocaleString()}</s-text>
+            </s-grid>
+          </s-clickable>
+          <s-divider direction="block" />
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="arrow-up" tone="success" size="small" />
+                <s-heading>Conv. Rate</s-heading>
+              </s-stack>
+              <s-stack direction="inline" gap="small-200">
+                <s-text>{totals.conversionRate}%</s-text>
+                {Number(totals.conversionRate) > 0 && (
+                  <s-badge tone="success" icon="arrow-up">{totals.conversionRate}%</s-badge>
+                )}
+              </s-stack>
+            </s-grid>
+          </s-clickable>
+          <s-divider direction="block" />
+          <s-clickable paddingBlock="small-400" paddingInline="small-100" borderRadius="base">
+            <s-grid gap="small-300">
+              <s-stack direction="inline" gap="small-200" align-items="center">
+                <s-icon type="money" color="subdued" size="small" />
+                <s-heading>Revenue</s-heading>
+              </s-stack>
+              <s-text>${totals.revenue.toFixed(2)}</s-text>
+            </s-grid>
+          </s-clickable>
+        </s-grid>
+      </s-section>
 
       {/* Surface Breakdown */}
       {surfaceBreakdown.length > 0 && (
         <>
-          <div style={{ marginTop: "16px" }} />
           <s-section heading="By surface">
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", overflow: "hidden" }}>
-              <s-table>
-                <s-table-header-row>
-                  <s-table-header>Surface</s-table-header>
-                  <s-table-header>Impressions</s-table-header>
-                  <s-table-header>Clicks</s-table-header>
-                  <s-table-header>Add to Cart</s-table-header>
-                  <s-table-header>Orders</s-table-header>
-                  <s-table-header>Conv. Rate</s-table-header>
-                  <s-table-header>Revenue</s-table-header>
-                </s-table-header-row>
-                <s-table-body>
-                  {surfaceBreakdown.map((row) => {
-                    const rate =
-                      row.impressions > 0
-                        ? ((row.conversions / row.impressions) * 100).toFixed(1)
-                        : "0.0";
-                    return (
-                      <s-table-row key={row.surface}>
-                        <s-table-cell>
-                          <s-badge>{SURFACE_LABELS[row.surface] || row.surface}</s-badge>
-                        </s-table-cell>
-                        <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.addToCarts.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{rate}%</s-table-cell>
-                        <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
-                      </s-table-row>
-                    );
-                  })}
-                </s-table-body>
-              </s-table>
-            </div>
+            <s-table>
+              <s-table-header-row>
+                <s-table-header>Surface</s-table-header>
+                <s-table-header>Impressions</s-table-header>
+                <s-table-header>Clicks</s-table-header>
+                <s-table-header>Add to Cart</s-table-header>
+                <s-table-header>Orders</s-table-header>
+                <s-table-header>Conv. Rate</s-table-header>
+                <s-table-header>Revenue</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {surfaceBreakdown.map((row) => {
+                  const rate =
+                    row.impressions > 0
+                      ? ((row.conversions / row.impressions) * 100).toFixed(1)
+                      : "0.0";
+                  return (
+                    <s-table-row key={row.surface}>
+                      <s-table-cell>
+                        <s-badge icon={SURFACE_ICONS[row.surface] as any}>{SURFACE_LABELS[row.surface] || row.surface}</s-badge>
+                      </s-table-cell>
+                      <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.addToCarts.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{rate}%</s-table-cell>
+                      <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
+                    </s-table-row>
+                  );
+                })}
+              </s-table-body>
+            </s-table>
           </s-section>
         </>
       )}
@@ -238,68 +311,59 @@ export default function Analytics() {
       {/* Daily Trend */}
       {dailyTrend.length > 0 && (
         <>
-          <div style={{ marginTop: "4px" }} />
           <s-section heading="Daily trend">
-            <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", overflow: "hidden" }}>
-              <s-table>
-                <s-table-header-row>
-                  <s-table-header>Date</s-table-header>
-                  <s-table-header>Impressions</s-table-header>
-                  <s-table-header>Clicks</s-table-header>
-                  <s-table-header>Add to Cart</s-table-header>
-                  <s-table-header>Orders</s-table-header>
-                  <s-table-header>Conv. Rate</s-table-header>
-                  <s-table-header>Revenue</s-table-header>
-                </s-table-header-row>
-                <s-table-body>
-                  {dailyTrend.map((row) => {
-                    const rate =
-                      row.impressions > 0
-                        ? ((row.conversions / row.impressions) * 100).toFixed(1)
-                        : "0.0";
-                    return (
-                      <s-table-row key={row.day}>
-                        <s-table-cell>{row.day}</s-table-cell>
-                        <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.addToCarts.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
-                        <s-table-cell>{rate}%</s-table-cell>
-                        <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
-                      </s-table-row>
-                    );
-                  })}
-                </s-table-body>
-              </s-table>
-            </div>
+            <s-table>
+              <s-table-header-row>
+                <s-table-header>Date</s-table-header>
+                <s-table-header>Impressions</s-table-header>
+                <s-table-header>Clicks</s-table-header>
+                <s-table-header>Add to Cart</s-table-header>
+                <s-table-header>Orders</s-table-header>
+                <s-table-header>Conv. Rate</s-table-header>
+                <s-table-header>Revenue</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {dailyTrend.map((row) => {
+                  const rate =
+                    row.impressions > 0
+                      ? ((row.conversions / row.impressions) * 100).toFixed(1)
+                      : "0.0";
+                  return (
+                    <s-table-row key={row.day}>
+                      <s-table-cell>{row.day}</s-table-cell>
+                      <s-table-cell>{row.impressions.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.clicks.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.addToCarts.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{row.conversions.toLocaleString()}</s-table-cell>
+                      <s-table-cell>{rate}%</s-table-cell>
+                      <s-table-cell>${row.revenue.toFixed(2)}</s-table-cell>
+                    </s-table-row>
+                  );
+                })}
+              </s-table-body>
+            </s-table>
           </s-section>
         </>
       )}
 
       {/* Empty state */}
       {surfaceBreakdown.length === 0 && (
-        <s-section>
-          <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "48px 24px", textAlign: "center" }}>
-            <s-stack direction="block" gap="base" align-items="center">
-              <s-text variant="headingMd">No data yet</s-text>
-              <s-text tone="subdued">
-                Analytics data will appear here once your upsell widgets start receiving traffic.
-              </s-text>
-            </s-stack>
-          </div>
+        <s-section accessibilityLabel="Empty analytics section">
+          <s-grid gap="base" justifyItems="center" paddingBlock="large-400">
+            <s-grid justifyItems="center" maxInlineSize="450px" gap="base">
+              <s-stack align-items="center" direction="block" gap="small-200">
+                <s-icon type="view" color="subdued" />
+                <s-heading>No data yet</s-heading>
+                <s-paragraph color="subdued">
+                  Analytics data will appear here once your upsell widgets start receiving traffic.
+                </s-paragraph>
+              </s-stack>
+            </s-grid>
+          </s-grid>
         </s-section>
       )}
     </s-page>
   );
 }
 
-function KpiCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E3E5E7", padding: "16px 20px" }}>
-      <s-stack direction="block" gap="small-200">
-        <s-text tone="subdued" variant="bodySm">{title}</s-text>
-        <s-text variant="headingLg">{value}</s-text>
-      </s-stack>
-    </div>
-  );
-}
+

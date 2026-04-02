@@ -9,6 +9,7 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import prisma from "./db.server";
 
 export const PLAN_NAME = "SuperUpsell Pro";
+export const BILLING_TEST_MODE = process.env.BILLING_TEST_MODE !== "false";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,

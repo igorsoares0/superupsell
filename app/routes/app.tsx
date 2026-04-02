@@ -3,7 +3,7 @@ import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticate, PLAN_NAME } from "../shopify.server";
+import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing: _billing } = await authenticate.admin(request);
@@ -14,11 +14,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (!url.pathname.startsWith("/app/billing")) {
     await billing.require({
       plans: [PLAN_NAME],
-      isTest: true,
+      isTest: BILLING_TEST_MODE,
       onFailure: async () =>
         billing.request({
           plan: PLAN_NAME,
-          isTest: true,
+          isTest: BILLING_TEST_MODE,
         }),
     });
   }

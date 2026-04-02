@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { useLoaderData, useSubmit, useNavigation } from "react-router";
-import { authenticate, PLAN_NAME } from "../shopify.server";
+import { useLoaderData, useSubmit, useNavigation, useActionData } from "react-router";
+import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing: _billing } = await authenticate.admin(request);
@@ -9,7 +9,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const { hasActivePayment, appSubscriptions } = await billing.check({
     plans: [PLAN_NAME],
-    isTest: true,
+    isTest: BILLING_TEST_MODE,
   });
 
   const subscription = appSubscriptions?.[0] ?? null;
@@ -33,22 +33,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = formData.get("intent");
 
   if (intent === "subscribe") {
-    await billing.request({
-      plan: PLAN_NAME,
-      isTest: true,
-    });
+    try {
+      await billing.request({
+        plan: PLAN_NAME,
+        isTest: BILLING_TEST_MODE,
+      });
+    } catch (err) {
+      console.error("Billing request failed:", err);
+      return { error: "Failed to initiate subscription. Please try again." };
+    }
   }
 
   if (intent === "cancel") {
     const subscriptionId = formData.get("subscriptionId") as string;
-    if (subscriptionId) {
+    if (!subscriptionId) {
+      return { error: "No active subscription found." };
+    }
+    try {
       await billing.cancel({
         subscriptionId,
-        isTest: true,
+        isTest: BILLING_TEST_MODE,
         prorate: true,
       });
+      return { cancelled: true };
+    } catch (err) {
+      console.error("Billing cancel failed:", err);
+      return { error: "Failed to cancel subscription. Please try again." };
     }
-    return { cancelled: true };
   }
 
   return null;
@@ -65,6 +76,7 @@ const FEATURES = [
 export default function Billing() {
   const { hasActivePayment, subscription } =
     useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const navigation = useNavigation();
   const isBusy = navigation.state !== "idle";
@@ -98,6 +110,11 @@ export default function Billing() {
 
   return (
     <s-page heading="Billing">
+      {actionData?.error && (
+        <div style={{ marginBottom: "16px" }}>
+          <s-banner tone="critical">{actionData.error}</s-banner>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
         {/* Plan card */}
         <div

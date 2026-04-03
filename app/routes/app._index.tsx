@@ -274,39 +274,35 @@ export default function Home() {
                         </s-text>
                       </s-table-cell>
                       <s-table-cell>
-                        <s-stack direction="inline" gap="small-200">
+                        <s-stack direction="inline" gap="small-200" align-items="center">
                           {offer.isActive ? (
                             <s-button
-                              variant="secondary"
-                              tone="critical"
+                              variant="tertiary"
                               icon="toggle-off"
+                              accessibilityLabel="Deactivate offer"
                               data-offer-action="toggle"
                               data-offer-id={offer.id}
                               data-offer-surface={offer.surface}
-                            >
-                              Deactivate
-                            </s-button>
+                            />
                           ) : (
                             <s-button
-                              variant="primary"
+                              variant="tertiary"
                               icon="toggle-on"
+                              accessibilityLabel="Activate offer"
                               data-offer-action="toggle"
                               data-offer-id={offer.id}
                               data-offer-surface={offer.surface}
-                            >
-                              Activate
-                            </s-button>
+                            />
                           )}
                           <s-button
                             variant="tertiary"
                             tone="critical"
                             icon="delete"
+                            accessibilityLabel="Delete offer"
                             data-offer-action="delete"
                             data-offer-id={offer.id}
                             data-offer-surface={offer.surface}
-                          >
-                            Delete
-                          </s-button>
+                          />
                         </s-stack>
                       </s-table-cell>
                     </s-table-row>

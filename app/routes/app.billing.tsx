@@ -123,7 +123,7 @@ export default function Billing() {
             </s-stack>
 
             <s-stack direction="inline" gap="small-200" align-items="baseline">
-              <span style={{ fontSize: "2rem", fontWeight: 700, color: "var(--p-color-text)" }}>$12.99</span>
+              <s-heading>$12.99</s-heading>
               <s-text>/month</s-text>
             </s-stack>
 
@@ -174,22 +174,22 @@ export default function Billing() {
 
                 <s-box padding="base" border-radius="base" background="subdued">
                   <s-stack direction="block" gap="base">
-                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center">
                       <s-text type="strong">Plan</s-text>
-                      <s-text>{subscription?.name ?? "SuperUpsell Pro"}</s-text>
-                    </s-stack>
+                      <s-text align="end">{subscription?.name ?? "SuperUpsell Pro"}</s-text>
+                    </s-grid>
                     <s-divider />
-                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
-                      <s-text type="strong">Status</s-text>
+                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
+                      <s-text type="strong" style={{ justifySelf: "start" }}>Status</s-text>
                       <s-badge tone="success" icon="check-circle">Active</s-badge>
-                    </s-stack>
+                    </s-grid>
                     {subscription?.test && (
                       <>
                         <s-divider />
-                        <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
-                          <s-text type="strong">Mode</s-text>
+                        <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
+                          <s-text type="strong" style={{ justifySelf: "start" }}>Mode</s-text>
                           <s-badge tone="warning">Test</s-badge>
-                        </s-stack>
+                        </s-grid>
                       </>
                     )}
                   </s-stack>
@@ -213,15 +213,15 @@ export default function Billing() {
 
                 <s-box padding="base" border-radius="base" background="subdued">
                   <s-stack direction="block" gap="base">
-                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
+                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center">
                       <s-text type="strong">Plan</s-text>
-                      <s-text>SuperUpsell Pro</s-text>
-                    </s-stack>
+                      <s-text align="end">SuperUpsell Pro</s-text>
+                    </s-grid>
                     <s-divider />
-                    <s-stack direction="inline" gap="base" align-items="center" style={{ justifyContent: "space-between" }}>
-                      <s-text type="strong">Status</s-text>
+                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
+                      <s-text type="strong" style={{ justifySelf: "start" }}>Status</s-text>
                       <s-badge tone="critical" icon="x-circle">Inactive</s-badge>
-                    </s-stack>
+                    </s-grid>
                   </s-stack>
                 </s-box>
 

@@ -417,18 +417,13 @@ export function OfferForm({
         </s-button>
 
         {/* FR-040: split layout — form left, preview right */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "24px",
-            alignItems: "start",
-          }}
+        <s-grid
+          gridTemplateColumns="@container (inline-size <= 600px) 1fr, 1fr 1fr"
+          gap="base"
+          align-items="start"
         >
           {/* ─── Left column: form ─── */}
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
+          <s-stack direction="block" gap="base">
             {/* Basic Settings */}
             <s-box padding="large-200" border="base" border-radius="base" background="base">
               <s-stack direction="block" gap="base">
@@ -509,7 +504,7 @@ export function OfferForm({
                       ({selectedTargets.length} selected)
                     </s-button>
                     {selectedTargets.length > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <s-stack direction="block" gap="small-200">
                         {selectedTargets.map((t) => (
                           <ResourceItem
                             key={t.id}
@@ -522,7 +517,7 @@ export function OfferForm({
                             }
                           />
                         ))}
-                      </div>
+                      </s-stack>
                     )}
                   </>
                 )}
@@ -543,7 +538,7 @@ export function OfferForm({
                   Select upsell products ({selectedProducts.length} selected)
                 </s-button>
                 {selectedProducts.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <s-stack direction="block" gap="small-200">
                     {selectedProducts.map((p) => (
                       <ResourceItem
                         key={p.productId}
@@ -556,7 +551,7 @@ export function OfferForm({
                         }
                       />
                     ))}
-                  </div>
+                  </s-stack>
                 )}
                 {errors.upsellProducts && (
                   <s-banner tone="critical">
@@ -727,13 +722,13 @@ export function OfferForm({
                 </s-stack>
               </s-stack>
             </s-box>
-          </div>
+          </s-stack>
 
           {/* ─── Right column: live preview ─── */}
-          <div style={{ position: "sticky", top: "16px" }}>
+          <s-box position="sticky" insetBlockStart="base">
             <UpsellPreview form={form} products={selectedProducts} />
-          </div>
-        </div>
+          </s-box>
+        </s-grid>
       </s-page>
     </div>
   );
@@ -748,6 +743,15 @@ function ResourceItem({
   imageUrl?: string;
   onRemove: () => void;
 }) {
+  const removeRef = useRef<any>(null);
+
+  useEffect(() => {
+    const el = removeRef.current as HTMLElement | null;
+    if (!el) return;
+    el.addEventListener("click", onRemove);
+    return () => el.removeEventListener("click", onRemove);
+  });
+
   return (
     <s-box padding="small-200" border="base" border-radius="base" background="subdued">
       <s-stack direction="inline" gap="small-200" align-items="center">
@@ -759,24 +763,13 @@ function ResourceItem({
           </s-box>
         )}
         <s-text>{title}</s-text>
-        <button
-          type="button"
-          onClick={onRemove}
-          style={{
-            marginLeft: "auto",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "4px",
-            borderRadius: "4px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          aria-label={`Remove ${title}`}
-        >
-          <s-icon type="x-circle" size="small" color="subdued" />
-        </button>
+        <s-button
+          ref={removeRef}
+          variant="tertiary"
+          tone="critical"
+          icon="x-circle"
+          accessibilityLabel={`Remove ${title}`}
+        />
       </s-stack>
     </s-box>
   );

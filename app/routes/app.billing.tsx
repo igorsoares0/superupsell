@@ -83,17 +83,23 @@ export default function Billing() {
 
   const subscribeRef = useRef<any>(null);
   const cancelRef = useRef<any>(null);
+  const confirmCancelRef = useRef<any>(null);
 
   useEffect(() => {
     const subEl = subscribeRef.current as HTMLElement | null;
     const canEl = cancelRef.current as HTMLElement | null;
+    const confirmEl = confirmCancelRef.current as HTMLElement | null;
 
     const onSubscribe = () => {
       const data = new FormData();
       data.set("intent", "subscribe");
       submit(data, { method: "POST" });
     };
-    const onCancel = () => {
+    const onOpenCancelModal = () => {
+      shopify.modal.show("cancel-confirm-modal");
+    };
+    const onConfirmCancel = () => {
+      shopify.modal.hide("cancel-confirm-modal");
       const data = new FormData();
       data.set("intent", "cancel");
       if (subscription?.id) data.set("subscriptionId", subscription.id);
@@ -101,10 +107,12 @@ export default function Billing() {
     };
 
     subEl?.addEventListener("click", onSubscribe);
-    canEl?.addEventListener("click", onCancel);
+    canEl?.addEventListener("click", onOpenCancelModal);
+    confirmEl?.addEventListener("click", onConfirmCancel);
     return () => {
       subEl?.removeEventListener("click", onSubscribe);
-      canEl?.removeEventListener("click", onCancel);
+      canEl?.removeEventListener("click", onOpenCancelModal);
+      confirmEl?.removeEventListener("click", onConfirmCancel);
     };
   });
 
@@ -238,6 +246,27 @@ export default function Billing() {
           </s-stack>
         </s-box>
       </s-grid>
+
+      <s-modal id="cancel-confirm-modal">
+        <s-box padding="large-200">
+          <s-stack direction="block" gap="large-200">
+            <s-text>
+              Are you sure you want to cancel your subscription? You will lose
+              access to all premium features at the end of the current billing
+              period.
+            </s-text>
+            <s-stack direction="inline" gap="base" align-items="center">
+              <s-button
+                ref={confirmCancelRef}
+                variant="primary"
+                tone="critical"
+              >
+                Yes, cancel subscription
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-box>
+      </s-modal>
     </s-page>
   );
 }

@@ -275,25 +275,17 @@ export default function Home() {
                       </s-table-cell>
                       <s-table-cell>
                         <s-stack direction="inline" gap="small-200" align-items="center">
-                          {offer.isActive ? (
-                            <s-button
-                              variant="tertiary"
-                              icon="toggle-off"
-                              accessibilityLabel="Deactivate offer"
-                              data-offer-action="toggle"
-                              data-offer-id={offer.id}
-                              data-offer-surface={offer.surface}
-                            />
-                          ) : (
-                            <s-button
-                              variant="tertiary"
-                              icon="toggle-on"
-                              accessibilityLabel="Activate offer"
-                              data-offer-action="toggle"
-                              data-offer-id={offer.id}
-                              data-offer-surface={offer.surface}
-                            />
-                          )}
+                          <s-switch
+                            checked={offer.isActive || undefined}
+                            accessibilityLabel={
+                              offer.isActive
+                                ? "Deactivate offer"
+                                : "Activate offer"
+                            }
+                            data-offer-action="toggle"
+                            data-offer-id={offer.id}
+                            data-offer-surface={offer.surface}
+                          />
                           <s-button
                             variant="tertiary"
                             tone="critical"

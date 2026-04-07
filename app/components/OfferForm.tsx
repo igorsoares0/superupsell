@@ -725,9 +725,16 @@ export function OfferForm({
           </s-stack>
 
           {/* ─── Right column: live preview ─── */}
-          <s-box position="sticky" insetBlockStart="base">
+          <div
+            style={{
+              position: "sticky",
+              top: "16px",
+              maxHeight: "calc(100vh - 32px)",
+              overflowY: "auto",
+            }}
+          >
             <UpsellPreview form={form} products={selectedProducts} />
-          </s-box>
+          </div>
         </s-grid>
       </s-page>
     </div>

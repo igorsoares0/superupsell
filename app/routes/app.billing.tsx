@@ -4,7 +4,7 @@ import { useLoaderData, useSubmit, useNavigation, useActionData } from "react-ro
 import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing: _billing } = await authenticate.admin(request);
+  const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
 
   const { hasActivePayment, appSubscriptions } = await billing.check({
@@ -13,6 +13,42 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   const subscription = appSubscriptions?.[0] ?? null;
+
+  // billing.check() doesn't return trialDays/createdAt — query the Admin API
+  // directly so we can show how many days are left in the free trial.
+  let trialDaysLeft: number | null = null;
+  let trialEndsAt: string | null = null;
+  if (subscription) {
+    try {
+      const res = await admin.graphql(
+        `#graphql
+        query CurrentSubscriptionTrial {
+          currentAppInstallation {
+            activeSubscriptions {
+              id
+              trialDays
+              createdAt
+            }
+          }
+        }`,
+      );
+      const { data } = await res.json();
+      const subs = data?.currentAppInstallation?.activeSubscriptions ?? [];
+      const match =
+        subs.find((s: any) => s.id === subscription.id) ?? subs[0] ?? null;
+      if (match?.trialDays > 0 && match?.createdAt) {
+        const created = new Date(match.createdAt).getTime();
+        const end = created + match.trialDays * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        if (end > now) {
+          trialDaysLeft = Math.ceil((end - now) / (24 * 60 * 60 * 1000));
+          trialEndsAt = new Date(end).toISOString();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch trial info:", err);
+    }
+  }
 
   return {
     hasActivePayment,
@@ -23,6 +59,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           test: subscription.test,
         }
       : null,
+    trialDaysLeft,
+    trialEndsAt,
   };
 };
 
@@ -74,8 +112,16 @@ const FEATURES = [
 ];
 
 export default function Billing() {
-  const { hasActivePayment, subscription } =
+  const { hasActivePayment, subscription, trialDaysLeft, trialEndsAt } =
     useLoaderData<typeof loader>();
+  const isInTrial = trialDaysLeft !== null && trialDaysLeft > 0;
+  const trialEndLabel = trialEndsAt
+    ? new Date(trialEndsAt).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -176,28 +222,64 @@ export default function Billing() {
 
             {hasActivePayment ? (
               <>
-                <s-banner tone="success">
-                  Your subscription is active.{subscription?.test ? " (test mode)" : ""}
-                </s-banner>
+                {isInTrial ? (
+                  <s-banner tone="info">
+                    You're on the free trial — {trialDaysLeft} day
+                    {trialDaysLeft === 1 ? "" : "s"} remaining
+                    {trialEndLabel ? ` (ends ${trialEndLabel})` : ""}.
+                  </s-banner>
+                ) : (
+                  <s-banner tone="success">
+                    Your subscription is active.{subscription?.test ? " (test mode)" : ""}
+                  </s-banner>
+                )}
 
                 <s-box padding="base" border-radius="base" background="subdued">
                   <s-stack direction="block" gap="base">
-                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "16px",
+                      }}
+                    >
                       <s-text type="strong">Plan</s-text>
-                      <s-text align="end">{subscription?.name ?? "SuperUpsell Pro"}</s-text>
-                    </s-grid>
+                      <s-text>{subscription?.name ?? "SuperUpsell Pro"}</s-text>
+                    </div>
                     <s-divider />
-                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
-                      <s-text type="strong" style={{ justifySelf: "start" }}>Status</s-text>
-                      <s-badge tone="success" icon="check-circle">Active</s-badge>
-                    </s-grid>
-                    {subscription?.test && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "16px",
+                      }}
+                    >
+                      <s-text type="strong">Status</s-text>
+                      {isInTrial ? (
+                        <s-badge tone="info" icon="clock">Free trial</s-badge>
+                      ) : (
+                        <s-badge tone="success" icon="check-circle">Active</s-badge>
+                      )}
+                    </div>
+                    {isInTrial && (
                       <>
                         <s-divider />
-                        <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
-                          <s-text type="strong" style={{ justifySelf: "start" }}>Mode</s-text>
-                          <s-badge tone="warning">Test</s-badge>
-                        </s-grid>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "16px",
+                          }}
+                        >
+                          <s-text type="strong">Trial ends</s-text>
+                          <s-text>
+                            {trialEndLabel} ({trialDaysLeft} day
+                            {trialDaysLeft === 1 ? "" : "s"} left)
+                          </s-text>
+                        </div>
                       </>
                     )}
                   </s-stack>
@@ -221,15 +303,29 @@ export default function Billing() {
 
                 <s-box padding="base" border-radius="base" background="subdued">
                   <s-stack direction="block" gap="base">
-                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center">
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "16px",
+                      }}
+                    >
                       <s-text type="strong">Plan</s-text>
-                      <s-text align="end">SuperUpsell Pro</s-text>
-                    </s-grid>
+                      <s-text>SuperUpsell Pro</s-text>
+                    </div>
                     <s-divider />
-                    <s-grid gridTemplateColumns="1fr 1fr" gap="base" align-items="center" justifyItems="end">
-                      <s-text type="strong" style={{ justifySelf: "start" }}>Status</s-text>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "16px",
+                      }}
+                    >
+                      <s-text type="strong">Status</s-text>
                       <s-badge tone="critical" icon="x-circle">Inactive</s-badge>
-                    </s-grid>
+                    </div>
                   </s-stack>
                 </s-box>
 

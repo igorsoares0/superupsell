@@ -131,6 +131,14 @@ export default function Billing() {
   const cancelRef = useRef<any>(null);
   const confirmCancelRef = useRef<any>(null);
 
+  // Surface a toast when the cancel action returns successfully so the user
+  // gets explicit confirmation instead of the page silently re-rendering.
+  useEffect(() => {
+    if (actionData?.cancelled) {
+      shopify.toast.show("Subscription cancelled");
+    }
+  }, [actionData]);
+
   useEffect(() => {
     const subEl = subscribeRef.current as HTMLElement | null;
     const canEl = cancelRef.current as HTMLElement | null;
@@ -166,6 +174,11 @@ export default function Billing() {
     <s-page heading="Billing">
       {actionData?.error && (
         <s-banner tone="critical">{actionData.error}</s-banner>
+      )}
+      {actionData?.cancelled && (
+        <s-banner tone="success">
+          Your subscription has been cancelled.
+        </s-banner>
       )}
       <s-grid gridTemplateColumns="@container (inline-size <= 500px) 1fr, 1fr 1fr" gap="base">
         {/* Plan card */}

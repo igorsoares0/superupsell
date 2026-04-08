@@ -1,5 +1,5 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { Outlet, useLoaderData, useRouteError } from "react-router";
+import { Outlet, redirect, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
@@ -9,18 +9,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing: _billing } = await authenticate.admin(request);
   const billing = _billing as any;
 
-  // Allow the billing page itself without requiring payment
+  // Soft gate: merchants without an active subscription land on /app/billing
+  // instead of being shoved directly into Shopify's approval screen. They see
+  // the plan details + features first, then opt in to the trial themselves.
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/app/billing")) {
-    await billing.require({
+    const { hasActivePayment } = await billing.check({
       plans: [PLAN_NAME],
       isTest: BILLING_TEST_MODE,
-      onFailure: async () =>
-        billing.request({
-          plan: PLAN_NAME,
-          isTest: BILLING_TEST_MODE,
-        }),
     });
+    if (!hasActivePayment) {
+      throw redirect("/app/billing");
+    }
   }
 
   // eslint-disable-next-line no-undef

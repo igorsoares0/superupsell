@@ -65,7 +65,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing: _billing } = await authenticate.admin(request);
+  const { billing: _billing, redirect } = await authenticate.admin(request);
   const billing = _billing as any;
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -77,11 +77,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         isTest: BILLING_TEST_MODE,
       });
     } catch (err) {
-      // Shopify's billing.request throws a Response for legitimate flows:
-      // the 401 carries X-Shopify-API-Request-Failure-Reauthorize-Url and the
-      // React Router adapter + App Bridge turn it into a top-level redirect
-      // to Shopify's charge approval screen. Must re-throw, not swallow.
-      if (err instanceof Response) throw err;
+      // billing.request throws a 401 Response carrying the charge approval
+      // URL in X-Shopify-API-Request-Failure-Reauthorize-Url. Since this runs
+      // in an action (not a loader), the adapter does NOT auto-convert it to
+      // an App Bridge top-level redirect — we have to extract the URL and use
+      // authenticate.admin's redirect() with target: "_top" ourselves.
+      if (err instanceof Response) {
+        const reauthorizeUrl = err.headers.get(
+          "X-Shopify-API-Request-Failure-Reauthorize-Url",
+        );
+        if (reauthorizeUrl) {
+          return redirect(reauthorizeUrl, { target: "_top" });
+        }
+      }
       console.error("Billing request failed:", err);
       return { error: "Failed to initiate subscription. Please try again." };
     }
@@ -100,8 +108,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
       return { cancelled: true };
     } catch (err) {
-      // Same rationale as subscribe — never swallow Response instances.
-      if (err instanceof Response) throw err;
+      // Cancel rarely triggers a reauthorize flow, but handle it defensively
+      // the same way for symmetry.
+      if (err instanceof Response) {
+        const reauthorizeUrl = err.headers.get(
+          "X-Shopify-API-Request-Failure-Reauthorize-Url",
+        );
+        if (reauthorizeUrl) {
+          return redirect(reauthorizeUrl, { target: "_top" });
+        }
+      }
       console.error("Billing cancel failed:", err);
       return { error: "Failed to cancel subscription. Please try again." };
     }

@@ -3,7 +3,7 @@
 # TODO: Replace with your production app's client_id from Shopify Partner Dashboard
 client_id = "2195b1a88a0850d56db2bb1d7e3f1f94"
 name = "superupsell"
-application_url = "https://superupsell.vercel.app"
+application_url = "https://upsell.useanbar.com"
 embedded = true
 
 [build]
@@ -24,13 +24,22 @@ api_version = "2026-04"
   topics = [ "orders/paid" ]
   uri = "/webhooks/orders/paid"
 
+  [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "/webhooks/app/subscriptions/update"
+
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://upsell.useanbar.com/webhooks/customers/data_request"
+  customer_deletion_url = "https://upsell.useanbar.com/webhooks/customers/redact"
+  shop_deletion_url = "https://upsell.useanbar.com/webhooks/shop/redact"
+
 [access_scopes]
 scopes = "write_products,write_discounts,read_orders"
 
 [app_proxy]
-url = "https://superupsell.vercel.app/api"
+url = "https://upsell.useanbar.com/api"
 subpath = "superupsell"
 prefix = "apps"
 
 [auth]
-redirect_urls = [ "https://superupsell.vercel.app/api/auth" ]
+redirect_urls = [ "https://upsell.useanbar.com/api/auth" ]

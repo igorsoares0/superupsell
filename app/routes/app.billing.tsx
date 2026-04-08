@@ -77,6 +77,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         isTest: BILLING_TEST_MODE,
       });
     } catch (err) {
+      // Shopify's billing.request throws a Response for legitimate flows:
+      // the 401 carries X-Shopify-API-Request-Failure-Reauthorize-Url and the
+      // React Router adapter + App Bridge turn it into a top-level redirect
+      // to Shopify's charge approval screen. Must re-throw, not swallow.
+      if (err instanceof Response) throw err;
       console.error("Billing request failed:", err);
       return { error: "Failed to initiate subscription. Please try again." };
     }
@@ -95,6 +100,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
       return { cancelled: true };
     } catch (err) {
+      // Same rationale as subscribe — never swallow Response instances.
+      if (err instanceof Response) throw err;
       console.error("Billing cancel failed:", err);
       return { error: "Failed to cancel subscription. Please try again." };
     }

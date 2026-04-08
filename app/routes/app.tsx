@@ -12,6 +12,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Soft gate: merchants without an active subscription land on /app/billing
   // instead of being shoved directly into Shopify's approval screen. They see
   // the plan details + features first, then opt in to the trial themselves.
+  //
+  // IMPORTANT: we must forward the query string (shop, host, embedded, ...)
+  // so the /app/billing loader can re-authenticate inside the embedded iframe.
+  // Dropping them sends the next request through /auth/login.
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/app/billing")) {
     const { hasActivePayment } = await billing.check({
@@ -19,7 +23,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       isTest: BILLING_TEST_MODE,
     });
     if (!hasActivePayment) {
-      throw redirect("/app/billing");
+      throw redirect(`/app/billing${url.search}`);
     }
   }
 

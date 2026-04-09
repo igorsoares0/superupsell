@@ -65,35 +65,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing: _billing, redirect } = await authenticate.admin(request);
+  const { billing: _billing } = await authenticate.admin(request);
   const billing = _billing as any;
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  if (intent === "subscribe") {
-    try {
-      await billing.request({
-        plan: PLAN_NAME,
-        isTest: BILLING_TEST_MODE,
-      });
-    } catch (err) {
-      // billing.request throws a 401 Response carrying the charge approval
-      // URL in X-Shopify-API-Request-Failure-Reauthorize-Url. Since this runs
-      // in an action (not a loader), the adapter does NOT auto-convert it to
-      // an App Bridge top-level redirect — we have to extract the URL and use
-      // authenticate.admin's redirect() with target: "_top" ourselves.
-      if (err instanceof Response) {
-        const reauthorizeUrl = err.headers.get(
-          "X-Shopify-API-Request-Failure-Reauthorize-Url",
-        );
-        if (reauthorizeUrl) {
-          return redirect(reauthorizeUrl, { target: "_top" });
-        }
-      }
-      console.error("Billing request failed:", err);
-      return { error: "Failed to initiate subscription. Please try again." };
-    }
-  }
+  // Note: subscribe flow lives in app.billing.subscribe.tsx (loader-only)
+  // because billing.request's 401 reauthorize response is only intercepted
+  // by the Shopify adapter when thrown from a loader, not an action.
 
   if (intent === "cancel") {
     const subscriptionId = formData.get("subscriptionId") as string;
@@ -108,16 +87,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
       return { cancelled: true };
     } catch (err) {
-      // Cancel rarely triggers a reauthorize flow, but handle it defensively
-      // the same way for symmetry.
-      if (err instanceof Response) {
-        const reauthorizeUrl = err.headers.get(
-          "X-Shopify-API-Request-Failure-Reauthorize-Url",
-        );
-        if (reauthorizeUrl) {
-          return redirect(reauthorizeUrl, { target: "_top" });
-        }
-      }
       console.error("Billing cancel failed:", err);
       return { error: "Failed to cancel subscription. Please try again." };
     }
@@ -168,9 +137,13 @@ export default function Billing() {
     const confirmEl = confirmCancelRef.current as HTMLElement | null;
 
     const onSubscribe = () => {
-      const data = new FormData();
-      data.set("intent", "subscribe");
-      submit(data, { method: "POST" });
+      // Navigate (not submit) to the loader route that triggers the Shopify
+      // approval flow. Must use a full-page navigation so query params
+      // (shop, host, embedded) are carried over and the loader can
+      // authenticate — fetcher submits go through a different path that
+      // doesn't trigger the adapter's top-level redirect interception.
+      const search = window.location.search;
+      window.location.href = `/app/billing/subscribe${search}`;
     };
     const onOpenCancelModal = () => {
       shopify.modal.show("cancel-confirm-modal");

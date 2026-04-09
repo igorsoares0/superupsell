@@ -119,9 +119,11 @@ export default function Billing() {
   const navigation = useNavigation();
   const isBusy = navigation.state !== "idle";
 
-  const subscribeRef = useRef<any>(null);
-  const cancelRef = useRef<any>(null);
-  const confirmCancelRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+  const subscriptionIdRef = useRef(subscription?.id);
+  subscriptionIdRef.current = subscription?.id;
 
   // Surface a toast when the cancel action returns successfully so the user
   // gets explicit confirmation instead of the page silently re-rendering.
@@ -131,42 +133,56 @@ export default function Billing() {
     }
   }, [actionData]);
 
+  // Use event delegation (not refs) so that BOTH subscribe buttons work —
+  // React only keeps the last ref assignment when two elements share the same
+  // ref, so a ref-based approach silently drops the first button.
+  // composedPath() is required because Polaris web components wrap their
+  // clickable targets inside a Shadow DOM.
   useEffect(() => {
-    const subEl = subscribeRef.current as HTMLElement | null;
-    const canEl = cancelRef.current as HTMLElement | null;
-    const confirmEl = confirmCancelRef.current as HTMLElement | null;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const onSubscribe = () => {
-      // Navigate (not submit) to the loader route that triggers the Shopify
-      // approval flow. Must use a full-page navigation so query params
-      // (shop, host, embedded) are carried over and the loader can
-      // authenticate — fetcher submits go through a different path that
-      // doesn't trigger the adapter's top-level redirect interception.
-      const search = window.location.search;
-      window.location.href = `/app/billing/subscribe${search}`;
-    };
-    const onOpenCancelModal = () => {
-      shopify.modal.show("cancel-confirm-modal");
-    };
-    const onConfirmCancel = () => {
-      shopify.modal.hide("cancel-confirm-modal");
-      const data = new FormData();
-      data.set("intent", "cancel");
-      if (subscription?.id) data.set("subscriptionId", subscription.id);
-      submit(data, { method: "POST" });
+    const handleClick = (e: Event) => {
+      const path = e.composedPath();
+      const actionEl = path.find(
+        (el) =>
+          el instanceof HTMLElement && el.hasAttribute("data-billing-action"),
+      ) as HTMLElement | undefined;
+      if (!actionEl) return;
+
+      const action = actionEl.getAttribute("data-billing-action");
+
+      if (action === "subscribe") {
+        // Navigate (not submit) to the loader route that triggers the Shopify
+        // approval flow. Must use a full-page navigation so query params
+        // (shop, host, embedded) are carried over and the loader can
+        // authenticate — fetcher submits go through a different path that
+        // doesn't trigger the adapter's top-level redirect interception.
+        const search = window.location.search;
+        window.location.href = `/app/billing/subscribe${search}`;
+        return;
+      }
+      if (action === "open-cancel-modal") {
+        shopify.modal.show("cancel-confirm-modal");
+        return;
+      }
+      if (action === "confirm-cancel") {
+        shopify.modal.hide("cancel-confirm-modal");
+        const data = new FormData();
+        data.set("intent", "cancel");
+        const subId = subscriptionIdRef.current;
+        if (subId) data.set("subscriptionId", subId);
+        submitRef.current(data, { method: "POST" });
+        return;
+      }
     };
 
-    subEl?.addEventListener("click", onSubscribe);
-    canEl?.addEventListener("click", onOpenCancelModal);
-    confirmEl?.addEventListener("click", onConfirmCancel);
-    return () => {
-      subEl?.removeEventListener("click", onSubscribe);
-      canEl?.removeEventListener("click", onOpenCancelModal);
-      confirmEl?.removeEventListener("click", onConfirmCancel);
-    };
-  });
+    container.addEventListener("click", handleClick);
+    return () => container.removeEventListener("click", handleClick);
+  }, []);
 
   return (
+    <div ref={containerRef}>
     <s-page heading="Billing">
       {actionData?.error && (
         <s-banner tone="critical">{actionData.error}</s-banner>
@@ -210,7 +226,7 @@ export default function Billing() {
 
             {!hasActivePayment && (
               <s-button
-                ref={subscribeRef}
+                data-billing-action="subscribe"
                 variant="primary"
                 icon="star-filled"
                 {...(isBusy ? { loading: true } : {})}
@@ -295,7 +311,7 @@ export default function Billing() {
                 </s-box>
 
                 <s-button
-                  ref={cancelRef}
+                  data-billing-action="open-cancel-modal"
                   variant="tertiary"
                   tone="critical"
                   icon="x-circle"
@@ -339,7 +355,7 @@ export default function Billing() {
                 </s-box>
 
                 <s-button
-                  ref={subscribeRef}
+                  data-billing-action="subscribe"
                   variant="primary"
                   icon="star-filled"
                   {...(isBusy ? { loading: true } : {})}
@@ -362,7 +378,7 @@ export default function Billing() {
             </s-text>
             <s-stack direction="inline" gap="base" align-items="center">
               <s-button
-                ref={confirmCancelRef}
+                data-billing-action="confirm-cancel"
                 variant="primary"
                 tone="critical"
               >
@@ -373,5 +389,6 @@ export default function Billing() {
         </s-box>
       </s-modal>
     </s-page>
+    </div>
   );
 }

@@ -43,6 +43,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!VALID_SURFACES.includes(surface)) continue;
     if (!offerId) continue;
 
+    // Skip if the offer no longer exists (deleted / wrong ID from storefront)
+    const offerExists = await prisma.offer.findUnique({
+      where: { id: offerId },
+      select: { id: true },
+    });
+    if (!offerExists) continue;
+
     const amount = evt.amount ? parseFloat(evt.amount) : null;
 
     // Write raw event

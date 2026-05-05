@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { useLoaderData, useSubmit, useNavigation, useActionData, useNavigate } from "react-router";
+import { useLoaderData, useSubmit, useNavigation, useActionData } from "react-router";
 import { authenticate, PLAN_NAME, getIsTest } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -71,9 +71,46 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  // Note: subscribe flow lives in app.billing.subscribe.tsx (loader-only)
-  // because billing.request's 401 reauthorize response is only intercepted
-  // by the Shopify adapter when thrown from a loader, not an action.
+  if (intent === "subscribe") {
+    // billing.request always throws a 401 Response carrying the approval URL
+    // in the X-Shopify-API-Request-Failure-Reauthorize-Url header. We catch
+    // it ourselves and return the URL as JSON so the client can do an
+    // explicit top-level redirect via window.top.location.href — this is
+    // more reliable than relying on the adapter to intercept the 401, which
+    // doesn't work for fetcher/navigate-driven calls (only HTML full-page
+    // loads), and avoids the Safari third-party-cookie trap that breaks
+    // window.location.href navigation from inside the iframe.
+    const isTest = await getIsTest(admin);
+    const origin = new URL(request.url).origin;
+    try {
+      // First check — if already subscribed, no need to request again
+      const { hasActivePayment } = await billing.check({
+        plans: [PLAN_NAME],
+        isTest,
+      });
+      if (hasActivePayment) {
+        return { alreadySubscribed: true };
+      }
+      await billing.request({
+        plan: PLAN_NAME,
+        isTest,
+        returnUrl: `${origin}/app/billing`,
+      });
+      // Unreachable — billing.request always throws
+      return { error: "Unexpected: billing.request did not throw." };
+    } catch (thrown) {
+      if (thrown instanceof Response) {
+        const approvalUrl = thrown.headers.get(
+          "X-Shopify-API-Request-Failure-Reauthorize-Url",
+        );
+        if (approvalUrl) {
+          return { approvalUrl };
+        }
+      }
+      console.error("Billing request failed:", thrown);
+      return { error: "Failed to start subscription. Please try again." };
+    }
+  }
 
   if (intent === "cancel") {
     const subscriptionId = formData.get("subscriptionId") as string;
@@ -118,15 +155,12 @@ export default function Billing() {
     : null;
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
-  const navigate = useNavigate();
   const navigation = useNavigation();
   const isBusy = navigation.state !== "idle";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef(submit);
   submitRef.current = submit;
-  const navigateRef = useRef(navigate);
-  navigateRef.current = navigate;
   const subscriptionIdRef = useRef(subscription?.id);
   subscriptionIdRef.current = subscription?.id;
 
@@ -135,6 +169,18 @@ export default function Billing() {
   useEffect(() => {
     if (actionData?.cancelled) {
       shopify.toast.show("Subscription cancelled");
+    }
+  }, [actionData]);
+
+  // When the subscribe action returns the approval URL, do a top-level
+  // redirect (window.top, not window) so we break out of the embedded iframe
+  // and land on Shopify's charge approval screen. window.top.location.href
+  // works in all browsers regardless of cookie policies because it doesn't
+  // depend on the session at all — Shopify's URL is signed.
+  useEffect(() => {
+    if (actionData?.approvalUrl) {
+      const target = window.top ?? window;
+      target.location.href = actionData.approvalUrl;
     }
   }, [actionData]);
 
@@ -158,15 +204,14 @@ export default function Billing() {
       const action = actionEl.getAttribute("data-billing-action");
 
       if (action === "subscribe") {
-        // Use React Router navigation (not window.location.href) so the
-        // request goes through the embedded app's authenticated fetch
-        // (session token in Authorization header). A hard navigation drops
-        // the App Bridge session token and falls back to the session cookie,
-        // which Safari/Chrome block as third-party in the iframe — landing
-        // the merchant on the standalone /auth/login page instead of the
-        // Shopify charge approval screen.
-        const search = window.location.search;
-        navigateRef.current(`/app/billing/subscribe${search}`);
+        // Submit to the action which returns { approvalUrl } — the useEffect
+        // above then performs a top-level redirect to Shopify's approval
+        // screen. This avoids both the Safari cookie problem (no need for
+        // session cookie on a hard nav) and the adapter-interception
+        // problem (we extract the reauthorize URL ourselves).
+        const data = new FormData();
+        data.set("intent", "subscribe");
+        submitRef.current(data, { method: "POST" });
         return;
       }
       if (action === "open-cancel-modal") {

@@ -3,10 +3,10 @@ import { Outlet, redirect, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
+import { authenticate, PLAN_NAME, getIsTest } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing: _billing } = await authenticate.admin(request);
+  const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
 
   // Soft gate: merchants without an active subscription land on /app/billing
@@ -18,9 +18,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Dropping them sends the next request through /auth/login.
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/app/billing")) {
+    const isTest = await getIsTest(admin);
     const { hasActivePayment } = await billing.check({
       plans: [PLAN_NAME],
-      isTest: BILLING_TEST_MODE,
+      isTest,
     });
     if (!hasActivePayment) {
       throw redirect(`/app/billing${url.search}`);

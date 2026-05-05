@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
-import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
+import { authenticate, PLAN_NAME, getIsTest } from "../shopify.server";
 
 /**
  * Dedicated route that initiates the Shopify billing approval flow.
@@ -23,15 +23,16 @@ import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
  *   5. Merchant approves -> Shopify redirects back to returnUrl (/app/billing)
  */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing: _billing } = await authenticate.admin(request);
+  const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
+  const isTest = await getIsTest(admin);
 
   // If they already have an active subscription, skip the request entirely
   // and bounce back to the billing page so they don't get shown the approval
   // screen for a plan they already own.
   const { hasActivePayment } = await billing.check({
     plans: [PLAN_NAME],
-    isTest: BILLING_TEST_MODE,
+    isTest,
   });
   if (hasActivePayment) {
     const search = new URL(request.url).search;
@@ -42,11 +43,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   await billing.require({
     plans: [PLAN_NAME],
-    isTest: BILLING_TEST_MODE,
+    isTest,
     onFailure: async () =>
       billing.request({
         plan: PLAN_NAME,
-        isTest: BILLING_TEST_MODE,
+        isTest,
         returnUrl: `${origin}/app/billing`,
       }),
   });

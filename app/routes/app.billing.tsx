@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { useLoaderData, useSubmit, useNavigation, useActionData } from "react-router";
-import { authenticate, PLAN_NAME, BILLING_TEST_MODE } from "../shopify.server";
+import { useLoaderData, useSubmit, useNavigation, useActionData, useNavigate } from "react-router";
+import { authenticate, PLAN_NAME, getIsTest } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
 
+  const isTest = await getIsTest(admin);
   const { hasActivePayment, appSubscriptions } = await billing.check({
     plans: [PLAN_NAME],
-    isTest: BILLING_TEST_MODE,
+    isTest,
   });
 
   const subscription = appSubscriptions?.[0] ?? null;
@@ -65,7 +66,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing: _billing } = await authenticate.admin(request);
+  const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -80,9 +81,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "No active subscription found." };
     }
     try {
+      const isTest = await getIsTest(admin);
       await billing.cancel({
         subscriptionId,
-        isTest: BILLING_TEST_MODE,
+        isTest,
         prorate: true,
       });
       return { cancelled: true };
@@ -116,12 +118,15 @@ export default function Billing() {
     : null;
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
+  const navigate = useNavigate();
   const navigation = useNavigation();
   const isBusy = navigation.state !== "idle";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef(submit);
   submitRef.current = submit;
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const subscriptionIdRef = useRef(subscription?.id);
   subscriptionIdRef.current = subscription?.id;
 
@@ -153,13 +158,15 @@ export default function Billing() {
       const action = actionEl.getAttribute("data-billing-action");
 
       if (action === "subscribe") {
-        // Navigate (not submit) to the loader route that triggers the Shopify
-        // approval flow. Must use a full-page navigation so query params
-        // (shop, host, embedded) are carried over and the loader can
-        // authenticate — fetcher submits go through a different path that
-        // doesn't trigger the adapter's top-level redirect interception.
+        // Use React Router navigation (not window.location.href) so the
+        // request goes through the embedded app's authenticated fetch
+        // (session token in Authorization header). A hard navigation drops
+        // the App Bridge session token and falls back to the session cookie,
+        // which Safari/Chrome block as third-party in the iframe — landing
+        // the merchant on the standalone /auth/login page instead of the
+        // Shopify charge approval screen.
         const search = window.location.search;
-        window.location.href = `/app/billing/subscribe${search}`;
+        navigateRef.current(`/app/billing/subscribe${search}`);
         return;
       }
       if (action === "open-cancel-modal") {

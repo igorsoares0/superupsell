@@ -9,7 +9,29 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import prisma from "./db.server";
 
 export const PLAN_NAME = "SuperUpsell Pro";
-export const BILLING_TEST_MODE = process.env.BILLING_TEST_MODE === "true";
+
+// Detects whether billing calls should use isTest:true. Shopify's review team
+// installs on a Partner Test Store (partnerDevelopment=true), where the
+// platform forces subscriptions to test mode regardless of the flag passed in
+// billing.request — so billing.check must mirror that or it returns
+// hasActivePayment:false and the UI never reflects the approved subscription.
+// BILLING_TEST_MODE=true env var forces test mode for local/staging testing.
+export async function getIsTest(
+  admin: { graphql: (query: string) => Promise<Response> },
+): Promise<boolean> {
+  if (process.env.BILLING_TEST_MODE === "true") return true;
+  try {
+    const res = await admin.graphql(
+      `#graphql
+      query ShopBillingMode { shop { plan { partnerDevelopment } } }`,
+    );
+    const { data } = await res.json();
+    if (data?.shop?.plan?.partnerDevelopment) return true;
+  } catch (err) {
+    console.error("getIsTest: failed to detect shop plan", err);
+  }
+  return false;
+}
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,

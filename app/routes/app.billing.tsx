@@ -66,7 +66,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { billing: _billing, admin } = await authenticate.admin(request);
+  const { billing: _billing, admin, session } = await authenticate.admin(request);
   const billing = _billing as any;
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -81,7 +81,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // loads), and avoids the Safari third-party-cookie trap that breaks
     // window.location.href navigation from inside the iframe.
     const isTest = await getIsTest(admin);
-    const origin = new URL(request.url).origin;
+    // returnUrl must point to the embedded admin URL, not our raw app domain.
+    // After approval Shopify redirects the top window to returnUrl — if that's
+    // {our-domain}/app/billing the browser lands there with no shop/host
+    // params and no session cookie (cross-site, blocked), so authenticate.admin
+    // falls through to /auth/login. Using the embedded admin URL re-mounts the
+    // app inside the Shopify iframe with proper auth context.
+    const apiKey = process.env.SHOPIFY_API_KEY ?? "";
+    const returnUrl = `https://${session.shop}/admin/apps/${apiKey}/app/billing`;
     try {
       // First check — if already subscribed, no need to request again
       const { hasActivePayment } = await billing.check({
@@ -94,7 +101,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await billing.request({
         plan: PLAN_NAME,
         isTest,
-        returnUrl: `${origin}/app/billing`,
+        returnUrl,
       });
       // Unreachable — billing.request always throws
       return { error: "Unexpected: billing.request did not throw." };

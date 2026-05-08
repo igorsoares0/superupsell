@@ -7,11 +7,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { billing: _billing, admin } = await authenticate.admin(request);
   const billing = _billing as any;
 
-  const isTest = await getIsTest(admin);
-  const { hasActivePayment, appSubscriptions } = await billing.check({
-    plans: [PLAN_NAME],
-    isTest,
-  });
+  // Unfiltered check: returns true for ANY active subscription regardless of
+  // isTest or plan name. Filtering here caused subscriptions approved during
+  // Shopify review to not be reflected in the UI (App Store rejection 1.2.2).
+  const { hasActivePayment, appSubscriptions } = await billing.check();
 
   const subscription = appSubscriptions?.[0] ?? null;
 
@@ -90,11 +89,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const apiKey = process.env.SHOPIFY_API_KEY ?? "";
     const returnUrl = `https://${session.shop}/admin/apps/${apiKey}/app/billing`;
     try {
-      // First check — if already subscribed, no need to request again
-      const { hasActivePayment } = await billing.check({
-        plans: [PLAN_NAME],
-        isTest,
-      });
+      // Unfiltered check — if any active subscription already exists, skip
+      // re-requesting (prevents creating a duplicate charge).
+      const { hasActivePayment } = await billing.check();
       if (hasActivePayment) {
         return { alreadySubscribed: true };
       }
@@ -125,7 +122,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "No active subscription found." };
     }
     try {
-      const isTest = await getIsTest(admin);
+      // billing.cancel requires isTest to match the subscription's actual
+      // test mode. Read it from the live subscription rather than re-deriving
+      // from getIsTest — Shopify can force isTest=true on Partner Dev stores
+      // even when getIsTest would have returned false (or vice versa).
+      const { appSubscriptions } = await billing.check();
+      const sub = (appSubscriptions ?? []).find(
+        (s: any) => s.id === subscriptionId,
+      );
+      const isTest = sub?.test ?? false;
       await billing.cancel({
         subscriptionId,
         isTest,

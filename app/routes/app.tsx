@@ -3,10 +3,10 @@ import { Outlet, redirect, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticate, PLAN_NAME, getIsTest } from "../shopify.server";
+import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing: _billing, admin } = await authenticate.admin(request);
+  const { billing: _billing } = await authenticate.admin(request);
   const billing = _billing as any;
 
   // Soft gate: merchants without an active subscription land on /app/billing
@@ -16,13 +16,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // IMPORTANT: we must forward the query string (shop, host, embedded, ...)
   // so the /app/billing loader can re-authenticate inside the embedded iframe.
   // Dropping them sends the next request through /auth/login.
+  //
+  // billing.check() is called WITHOUT plans/isTest filters so it returns true
+  // for ANY active subscription (test or live, any plan). Filtering caused the
+  // previous Shopify rejection: on Partner Test Stores Shopify forces isTest
+  // regardless of what we pass to billing.request, so a filtered check kept
+  // returning hasActivePayment:false even after the merchant approved the
+  // charge — locking them on /app/billing forever.
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/app/billing")) {
-    const isTest = await getIsTest(admin);
-    const { hasActivePayment } = await billing.check({
-      plans: [PLAN_NAME],
-      isTest,
-    });
+    const { hasActivePayment } = await billing.check();
     if (!hasActivePayment) {
       throw redirect(`/app/billing${url.search}`);
     }
